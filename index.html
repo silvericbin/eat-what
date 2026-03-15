@@ -208,6 +208,17 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
 .ex-card{background:#fff;border-radius:var(--rs);padding:11px;border:1px solid var(--br);margin-top:9px}
 .ex-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br);font-size:12px;font-weight:700}
 .ex-row:last-child{border-bottom:none}
+/* day detail modal */
+.dd-sum{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--br);margin-bottom:2px}
+.dd-sum-lbl{font-size:13px;font-weight:800}
+.dd-sum-val{font-size:16px;font-weight:900;color:var(--mb)}
+.dd-sum-val.over{color:var(--pb)}
+.dd-ex-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:7px 0;border-bottom:1px solid var(--br);gap:6px}
+.dd-ex-row:last-child{border-bottom:none}
+.dd-ex-name{font-size:13px;font-weight:700}
+.dd-ex-km{font-size:12px;font-weight:800;color:var(--lb);text-align:right;min-width:52px}
+.dd-ex-min{font-size:12px;font-weight:900;color:var(--tx);text-align:right;min-width:60px}
+.dd-jump-btn{width:100%;margin-top:14px;background:linear-gradient(135deg,var(--ml),var(--ll));color:var(--lb);border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif}
 .ex-val{font-weight:900;color:var(--lb)}
 .snk-log-item{display:flex;align-items:center;gap:8px;background:#fff;border-radius:11px;padding:9px 12px;margin-bottom:6px;border:1px solid var(--br);font-size:12px;font-weight:700}
 .ch-snk{background:var(--kl);border-color:#ff88bb;color:var(--kb)}
@@ -744,7 +755,7 @@ let rcTagFilter  = '全部'; // recipe list filter
 // ══════════════════════════════════════════════
 //  PERSISTENCE
 // ══════════════════════════════════════════════
-const LS_KEY = 'eatwhat_v22';
+const LS_KEY = 'eatwhat_v23';
 
 function save() {
   // Never sync apiKey to cloud
@@ -1928,26 +1939,22 @@ function renderCalendar() {
     cell.innerHTML = `
       <span class="cal-day-num">${d}</span>
       ${kcal>0 ? `<span class="cal-day-kcal ${kcalClass}">${kcal}</span>` : ''}
-      ${isToday ? '<span class="cal-day-icon">📍</span>' : ''}`;
+      ${isToday ? '<span class="cal-day-icon">📍</span>' : (kcal>0 ? '<span class="cal-day-icon">🔥</span>' : '')}`;
 
-    // Tap to jump to that day's plan
+    // Tap: has data → open detail modal; in current week → also navigate
     if (!isFuture) {
       cell.onclick = () => {
-        // Find offset of this date relative to current week start
-        const ws = getWeekStart();
-        const cellDate = new Date(year, month, d);
-        const diff = Math.round((cellDate - ws) / 86400000);
-        if (diff >= 0 && diff < 7) {
-          // Date is in current week — jump directly
-          currentDayOffset = diff;
-          renderWeekDots();
-          renderDay();
-          // Switch to plan tab
-          const planTab = document.querySelector('.tab[onclick*="plan"]');
-          if (planTab) { planTab.click(); }
+        if (kcal > 0) {
+          openDayDetail(year, month, d, kcal, goal);
         } else {
-          // Date outside current week — just show a toast
-          toast(`${month+1}月${d}日`);
+          // No data — jump to plan page if in current week
+          const ws = getWeekStart();
+          const diff = Math.round((new Date(year,month,d) - ws) / 86400000);
+          if (diff >= 0 && diff < 7) {
+            currentDayOffset = diff; renderWeekDots(); renderDay();
+            const planTab = document.querySelector('.tab[onclick*="plan"]');
+            if (planTab) planTab.click();
+          }
         }
       };
     }
@@ -1960,6 +1967,70 @@ function renderCalendar() {
     <div class="kcal-stat"><div class="kcal-stat-num" style="color:var(--mb)">${daysUnder}</div><div class="kcal-stat-lbl">达标天数</div></div>
     <div class="kcal-stat"><div class="kcal-stat-num" style="color:var(--pb)">${daysOver}</div><div class="kcal-stat-lbl">超标天数</div></div>
     <div class="kcal-stat"><div class="kcal-stat-num" style="color:var(--lb)">${avg||'—'}</div><div class="kcal-stat-lbl">日均摄入 kcal</div></div>`;
+}
+
+// ══════════════════════════════════════════════
+//  DAY DETAIL (kcal → exercise conversion)
+// ══════════════════════════════════════════════
+const WEEK_DAYS = ['日','一','二','三','四','五','六'];
+function openDayDetail(year, month, day, kcal, goal) {
+  const dow = new Date(year, month, day).getDay();
+  document.getElementById('ddTitle').textContent =
+    `${month+1}月${day}日 · 周${WEEK_DAYS[dow]}`;
+
+  const diff   = kcal - goal;
+  const status = kcal <= goal
+    ? `<span style="color:var(--mb)">✅ 还差 ${Math.abs(diff)} kcal</span>`
+    : `<span style="color:var(--pb)">⚠️ 超出 ${diff} kcal</span>`;
+
+  // Exercise conversions
+  // walk: 4.5 kcal/min, 6 km/h → 0.1 km/min
+  // run:  8   kcal/min, 10km/h → 0.167 km/min
+  // dance: 6.5 kcal/min
+  // plank: 5.5 kcal/min
+  const walkMin  = Math.round(kcal / 4.5);
+  const walkKm   = (walkMin * 0.1).toFixed(1);
+  const runMin   = Math.round(kcal / 8);
+  const runKm    = (runMin / 6).toFixed(1);   // 10km/h = 10/60 km/min
+  const danceMin = Math.round(kcal / 6.5);
+  const plankMin = Math.round(kcal / 5.5);
+
+  const exRows = [
+    { icon:'🚶', name:'快走',    min:walkMin,  km:walkKm },
+    { icon:'🏃', name:'跑步',    min:runMin,   km:runKm  },
+    { icon:'💃', name:'跳操',    min:danceMin, km:null   },
+    { icon:'🧘', name:'平板支撑',min:plankMin, km:null   },
+  ].map(r => `
+    <div class="dd-ex-row">
+      <span class="dd-ex-name">${r.icon} ${r.name}</span>
+      <span class="dd-ex-km">${r.km ? r.km+' km' : ''}</span>
+      <span class="dd-ex-min">${r.min} 分钟</span>
+    </div>`).join('');
+
+  // Jump-to-plan button only if date is in current week
+  const ws   = getWeekStart();
+  const diff2 = Math.round((new Date(year,month,day) - ws) / 86400000);
+  const inWeek = diff2 >= 0 && diff2 < 7;
+  const jumpBtn = inWeek
+    ? `<button class="dd-jump-btn" onclick="
+        hideModal('dayDetailModal');
+        currentDayOffset=${diff2};
+        renderWeekDots();renderDay();
+        const t=document.querySelector('.tab[onclick*=\\'plan\\']');if(t)t.click();
+      ">→ 查看当天计划</button>`
+    : '';
+
+  document.getElementById('ddContent').innerHTML = `
+    <div class="dd-sum">
+      <span class="dd-sum-lbl">📊 今日摄入</span>
+      <span class="dd-sum-val${kcal>goal?' over':''}">${kcal} kcal</span>
+    </div>
+    <div style="font-size:12px;font-weight:700;padding:4px 0 10px;color:var(--mu)">${status}</div>
+    <div style="font-size:11px;font-weight:800;color:var(--mu);margin-bottom:6px;letter-spacing:.5px">🔥 消耗这些热量需要：</div>
+    ${exRows}
+    ${jumpBtn}`;
+
+  showModal('dayDetailModal');
 }
 
 // ══════════════════════════════════════════════
