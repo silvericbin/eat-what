@@ -1941,22 +1941,9 @@ function renderCalendar() {
       ${kcal>0 ? `<span class="cal-day-kcal ${kcalClass}">${kcal}</span>` : ''}
       ${isToday ? '<span class="cal-day-icon">📍</span>' : (kcal>0 ? '<span class="cal-day-icon">🔥</span>' : '')}`;
 
-    // Tap: has data → open detail modal; in current week → also navigate
+    // All non-future cells open the detail modal
     if (!isFuture) {
-      cell.onclick = () => {
-        if (kcal > 0) {
-          openDayDetail(year, month, d, kcal, goal);
-        } else {
-          // No data — jump to plan page if in current week
-          const ws = getWeekStart();
-          const diff = Math.round((new Date(year,month,d) - ws) / 86400000);
-          if (diff >= 0 && diff < 7) {
-            currentDayOffset = diff; renderWeekDots(); renderDay();
-            const planTab = document.querySelector('.tab[onclick*="plan"]');
-            if (planTab) planTab.click();
-          }
-        }
-      };
+      cell.onclick = () => openDayDetail(year, month, d, kcal, goal);
     }
     gridEl.appendChild(cell);
   }
@@ -1973,52 +1960,66 @@ function renderCalendar() {
 //  DAY DETAIL (kcal → exercise conversion)
 // ══════════════════════════════════════════════
 const WEEK_DAYS = ['日','一','二','三','四','五','六'];
+// Jump helper: offset=-1 means just switch to plan tab (today), else navigate to that day
+function ddJumpToPlan(offset) {
+  hideModal('dayDetailModal');
+  if (offset >= 0) {
+    currentDayOffset = offset;
+    renderWeekDots(); renderDay();
+  }
+  const t = document.querySelector('.tab[onclick*="plan"]');
+  if (t) t.click();
+}
+
 function openDayDetail(year, month, day, kcal, goal) {
   const dow = new Date(year, month, day).getDay();
   document.getElementById('ddTitle').textContent =
     `${month+1}月${day}日 · 周${WEEK_DAYS[dow]}`;
 
+  // Jump-to-plan button if date is in current week
+  const ws    = getWeekStart();
+  const diff2 = Math.round((new Date(year, month, day) - ws) / 86400000);
+  const inWeek = diff2 >= 0 && diff2 < 7;
+  // Always show jump button; in-week = navigate to that day, else = go to plan tab (today)
+  const jumpBtn = `<button class="dd-jump-btn" onclick="ddJumpToPlan(${inWeek ? diff2 : -1})">${inWeek ? '→ 查看当天计划' : '→ 前往计划页'}</button>`;
+
+  // No data case
+  if (!kcal) {
+    document.getElementById('ddContent').innerHTML = `
+      <div style="text-align:center;padding:24px 0 10px">
+        <div style="font-size:36px;margin-bottom:10px">🍽️</div>
+        <div style="font-size:13px;font-weight:800;color:var(--mu)">暂无记录</div>
+        <div style="font-size:11px;color:var(--mu);margin-top:4px">去计划页安排今日饮食并打卡</div>
+      </div>
+      ${jumpBtn}`;
+    showModal('dayDetailModal');
+    return;
+  }
+
+  // Has data — show exercise breakdown
   const diff   = kcal - goal;
   const status = kcal <= goal
     ? `<span style="color:var(--mb)">✅ 还差 ${Math.abs(diff)} kcal</span>`
     : `<span style="color:var(--pb)">⚠️ 超出 ${diff} kcal</span>`;
 
-  // Exercise conversions
-  // walk: 4.5 kcal/min, 6 km/h → 0.1 km/min
-  // run:  8   kcal/min, 10km/h → 0.167 km/min
-  // dance: 6.5 kcal/min
-  // plank: 5.5 kcal/min
   const walkMin  = Math.round(kcal / 4.5);
   const walkKm   = (walkMin * 0.1).toFixed(1);
   const runMin   = Math.round(kcal / 8);
-  const runKm    = (runMin / 6).toFixed(1);   // 10km/h = 10/60 km/min
+  const runKm    = (runMin / 6).toFixed(1);
   const danceMin = Math.round(kcal / 6.5);
   const plankMin = Math.round(kcal / 5.5);
 
   const exRows = [
-    { icon:'🚶', name:'快走',    min:walkMin,  km:walkKm },
-    { icon:'🏃', name:'跑步',    min:runMin,   km:runKm  },
-    { icon:'💃', name:'跳操',    min:danceMin, km:null   },
-    { icon:'🧘', name:'平板支撑',min:plankMin, km:null   },
+    { icon:'🚶', name:'快走',     min:walkMin,  km:walkKm },
+    { icon:'🏃', name:'跑步',     min:runMin,   km:runKm  },
+    { icon:'💃', name:'跳操',     min:danceMin, km:null   },
+    { icon:'🧘', name:'平板支撑', min:plankMin, km:null   },
   ].map(r => `
     <div class="dd-ex-row">
       <span class="dd-ex-name">${r.icon} ${r.name}</span>
       <span class="dd-ex-km">${r.km ? r.km+' km' : ''}</span>
       <span class="dd-ex-min">${r.min} 分钟</span>
     </div>`).join('');
-
-  // Jump-to-plan button only if date is in current week
-  const ws   = getWeekStart();
-  const diff2 = Math.round((new Date(year,month,day) - ws) / 86400000);
-  const inWeek = diff2 >= 0 && diff2 < 7;
-  const jumpBtn = inWeek
-    ? `<button class="dd-jump-btn" onclick="
-        hideModal('dayDetailModal');
-        currentDayOffset=${diff2};
-        renderWeekDots();renderDay();
-        const t=document.querySelector('.tab[onclick*=\\'plan\\']');if(t)t.click();
-      ">→ 查看当天计划</button>`
-    : '';
 
   document.getElementById('ddContent').innerHTML = `
     <div class="dd-sum">
