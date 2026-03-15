@@ -220,6 +220,12 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
 .dd-gap-row{font-size:12px;font-weight:800;padding:8px 10px;border-radius:10px;margin:8px 0 4px}
 .dd-gap-row.good{background:#d4f4e4;color:#1a6a48}
 .dd-gap-row.warn{background:#ffd4d4;color:#b03030}
+.dd-ex-log{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:12px;font-weight:700}
+.dd-ex-log:last-child{border-bottom:none}
+.dd-ex-log-kcal{color:var(--mb);font-weight:900}
+.ch-ex{background:var(--ll);border-color:var(--ld);color:#4a38a0}
+.ch-ex.sel{background:var(--lb);border-color:var(--lb);color:#fff}
+.dd-rec-btn{flex:1;background:linear-gradient(135deg,var(--lb),var(--ld));color:#fff;border:none;border-radius:12px;padding:10px;font-size:12px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif}
 .ex-val{font-weight:900;color:var(--lb)}
 .snk-log-item{display:flex;align-items:center;gap:8px;background:#fff;border-radius:11px;padding:9px 12px;margin-bottom:6px;border:1px solid var(--br);font-size:12px;font-weight:700}
 .ch-snk{background:var(--kl);border-color:#ff88bb;color:var(--kb)}
@@ -657,6 +663,32 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
   </div>
 </div>
 
+<!-- Exercise record modal -->
+<div class="overlay" id="exerciseModal">
+  <div class="mbox">
+    <div class="m-title">
+      <span>💪 记录运动</span>
+      <button class="m-close" onclick="closeExerciseModal()">✕</button>
+    </div>
+    <span class="lbl">运动类型</span>
+    <div class="chips" id="exTypeSel" style="margin-bottom:10px"></div>
+    <div id="exCustomRow" style="display:none;margin-bottom:10px">
+      <input class="inp" id="exCustomName" placeholder="自定义运动名称">
+    </div>
+    <div class="row2" style="margin-bottom:10px">
+      <div>
+        <span class="lbl">时长（分钟）</span>
+        <input class="inp" id="exMinIn" type="number" placeholder="如：30" oninput="autoCalcExKcal()">
+      </div>
+      <div>
+        <span class="lbl">消耗热量 kcal</span>
+        <input class="inp" id="exKcalIn" type="number" placeholder="自动计算，可修改">
+      </div>
+    </div>
+    <button class="gbtn g-green" onclick="logExercise()">✓ 记录</button>
+  </div>
+</div>
+
 <!-- Toast + Celeb -->
 <div class="toast" id="toast"></div>
 <div class="celeb-wrap" id="celebWrap" style="display:none"><div class="celeb-msg" id="celebMsg"></div></div>
@@ -720,6 +752,7 @@ const DEFAULTS = {
   weights:     [],
   snacks:      {},
   snackLib:    [],
+  exercises:   {}, // {date: [{type, icon, min, kcal}]}
   recipeTags:  ['主食','主菜','蔬菜','汤品','甜点'],
   settings: {
     calories:1400, snackLimit:3,
@@ -742,7 +775,7 @@ let rcTagFilter  = '全部'; // recipe list filter
 // ══════════════════════════════════════════════
 //  PERSISTENCE
 // ══════════════════════════════════════════════
-const LS_KEY = 'eatwhat_v25';
+const LS_KEY = 'eatwhat_v26';
 
 function save() {
   // Never sync apiKey to cloud
@@ -785,6 +818,8 @@ function load() {
         }
       });
       S.snacks = flatSnacks;
+      // Migration: ensure exercises exists
+      if (!S.exercises || typeof S.exercises !== 'object' || Array.isArray(S.exercises)) S.exercises = {};
     }
   } catch(e) { console.warn('Load error', e); }
 }
@@ -1919,10 +1954,16 @@ function renderCalendar() {
     cell.className = cellClass;
 
     const kcalClass = kcal>0 ? (kcal<=goal ? 'under' : 'over') : '';
+    const hasEx = (S.exercises[dateStr]||[]).length > 0;
+    const iconHtml = isToday ? '<span class="cal-day-icon">📍</span>'
+      : (kcal>0 && hasEx) ? '<span class="cal-day-icon">🔥💪</span>'
+      : kcal>0 ? '<span class="cal-day-icon">🔥</span>'
+      : hasEx ? '<span class="cal-day-icon">💪</span>'
+      : '';
     cell.innerHTML = `
       <span class="cal-day-num">${d}</span>
       ${kcal>0 ? `<span class="cal-day-kcal ${kcalClass}">${kcal}</span>` : ''}
-      ${isToday ? '<span class="cal-day-icon">📍</span>' : (kcal>0 ? '<span class="cal-day-icon">🔥</span>' : '')}`;
+      ${iconHtml}`;
 
     // All non-future cells open the detail modal
     if (!isFuture) {
@@ -1948,6 +1989,105 @@ function renderCalendar() {
 //  DAY DETAIL (kcal → exercise conversion)
 // ══════════════════════════════════════════════
 const WEEK_DAYS = ['日','一','二','三','四','五','六'];
+// ══════════════════════════════════════════════
+//  EXERCISE FUNCTIONS
+// ══════════════════════════════════════════════
+const EX_TYPES = [
+  {type:'快走',  icon:'🚶', rate:4.5},
+  {type:'跑步',  icon:'🏃', rate:8},
+  {type:'跳操',  icon:'💃', rate:6.5},
+  {type:'平板支撑',icon:'🧘',rate:5.5},
+  {type:'自定义', icon:'✏️', rate:null},
+];
+
+let _exDate = null; // date string for which exercise is being logged
+
+function openExerciseModal(dateStr) {
+  _exDate = dateStr;
+  document.getElementById('exMinIn').value   = '';
+  document.getElementById('exKcalIn').value  = '';
+  document.getElementById('exCustomName').value = '';
+  document.getElementById('exCustomRow').style.display = 'none';
+  // Build type chips
+  const c = document.getElementById('exTypeSel'); c.innerHTML='';
+  EX_TYPES.forEach(ex => {
+    const sp = document.createElement('span');
+    sp.className = 'chip ch-ex';
+    sp.dataset.type = ex.type;
+    sp.dataset.rate = ex.rate || '';
+    sp.textContent  = `${ex.icon} ${ex.type}`;
+    sp.onclick = () => {
+      document.querySelectorAll('#exTypeSel .chip').forEach(s=>s.classList.remove('sel'));
+      sp.classList.add('sel');
+      document.getElementById('exCustomRow').style.display = ex.type==='自定义' ? '' : 'none';
+      autoCalcExKcal();
+    };
+    c.appendChild(sp);
+  });
+  // Default select 跑步
+  c.children[1].click();
+  hideModal('dayDetailModal');
+  showModal('exerciseModal');
+}
+
+function autoCalcExKcal() {
+  const sel = document.querySelector('#exTypeSel .chip.sel');
+  if (!sel) return;
+  const rate = parseFloat(sel.dataset.rate);
+  const min  = parseInt(document.getElementById('exMinIn').value) || 0;
+  if (rate && min > 0)
+    document.getElementById('exKcalIn').value = Math.round(rate * min);
+}
+
+function closeExerciseModal() {
+  hideModal('exerciseModal');
+  // Re-open detail for the same date
+  if (_exDate) {
+    const [y,m,d] = _exDate.split('-').map(Number);
+    const mealKcal = (() => {
+      const p=S.plan[_exDate]||{}, ci=S.checkins[_exDate]||{};
+      return MTYPES.reduce((s,mt)=>ci[mt]?(s+(p[mt]||[]).reduce((a,dsh)=>a+(dsh.kcal||0),0)):s,0);
+    })();
+    const snackKcal = (S.snacks[_exDate]||[]).reduce((s,e)=>s+(e.kcal||0),0);
+    openDayDetail(y, m-1, d, mealKcal, snackKcal, S.settings.calories);
+  }
+}
+
+function logExercise() {
+  const sel = document.querySelector('#exTypeSel .chip.sel');
+  if (!sel) { toast('请选择运动类型'); return; }
+  const isCustom = sel.dataset.type === '自定义';
+  const customName = document.getElementById('exCustomName').value.trim();
+  if (isCustom && !customName) { toast('请填写运动名称'); return; }
+  const min  = parseInt(document.getElementById('exMinIn').value)  || 0;
+  const kcal = parseInt(document.getElementById('exKcalIn').value) || 0;
+  if (!min)  { toast('请填写运动时长'); return; }
+
+  const ex = isCustom
+    ? {type:customName, icon:'✏️', min, kcal}
+    : {type:sel.dataset.type, icon:sel.textContent.trim().split(' ')[0], min, kcal};
+
+  if (!S.exercises[_exDate]) S.exercises[_exDate] = [];
+  S.exercises[_exDate].push(ex);
+  save();
+  toast(`💪 已记录 ${ex.icon} ${ex.type} ${min} 分钟`);
+  closeExerciseModal(); // hides modal and re-opens day detail
+}
+
+function deleteExercise(dateStr, i) {
+  S.exercises[dateStr]?.splice(i, 1);
+  if (!S.exercises[dateStr]?.length) delete S.exercises[dateStr];
+  save();
+  // Re-open detail
+  const [y,m,d] = dateStr.split('-').map(Number);
+  const mealKcal = (() => {
+    const p=S.plan[dateStr]||{}, ci=S.checkins[dateStr]||{};
+    return MTYPES.reduce((s,mt)=>ci[mt]?(s+(p[mt]||[]).reduce((a,dsh)=>a+(dsh.kcal||0),0)):s,0);
+  })();
+  const snackKcal = (S.snacks[dateStr]||[]).reduce((s,e)=>s+(e.kcal||0),0);
+  openDayDetail(y, m-1, d, mealKcal, snackKcal, S.settings.calories);
+}
+
 // Jump helper: offset=-1 means just switch to plan tab (today), else navigate to that day
 function ddJumpToPlan(offset) {
   hideModal('dayDetailModal');
@@ -1973,84 +2113,93 @@ function calcBMR() {
 
 function openDayDetail(year, month, day, mealKcal, snackKcal, goal) {
   const kcal = mealKcal + snackKcal;
+  const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
   const dow = new Date(year, month, day).getDay();
-  document.getElementById('ddTitle').textContent =
-    `${month+1}月${day}日 · 周${WEEK_DAYS[dow]}`;
+  document.getElementById('ddTitle').textContent = `${month+1}月${day}日 · 周${WEEK_DAYS[dow]}`;
 
-  // Jump button
   const ws     = getWeekStart();
   const diff2  = Math.round((new Date(year, month, day) - ws) / 86400000);
   const inWeek = diff2 >= 0 && diff2 < 7;
   const jumpBtn = `<button class="dd-jump-btn" onclick="ddJumpToPlan(${inWeek ? diff2 : -1})">${inWeek ? '→ 查看当天计划' : '→ 前往计划页'}</button>`;
+  const recBtn  = `<button class="dd-rec-btn" onclick="openExerciseModal('${dateStr}')">💪 记录运动</button>`;
 
-  // No data case
   if (!kcal) {
     document.getElementById('ddContent').innerHTML = `
       <div style="text-align:center;padding:24px 0 10px">
         <div style="font-size:36px;margin-bottom:10px">🍽️</div>
-        <div style="font-size:13px;font-weight:800;color:var(--mu)">暂无记录</div>
+        <div style="font-size:13px;font-weight:800;color:var(--mu)">暂无饮食记录</div>
         <div style="font-size:11px;color:var(--mu);margin-top:4px">去计划页安排今日饮食并打卡</div>
       </div>
+      <div style="display:flex;gap:8px;margin-top:6px">${recBtn}</div>
       ${jumpBtn}`;
     showModal('dayDetailModal');
     return;
   }
 
-  // BMR & gap
   const { bmr, usingDefaults } = calcBMR();
-  const gap = kcal - bmr; // positive = excess over BMR, negative = already in deficit
-
-  // Status row
+  const gap = kcal - bmr;
   const gapAbs = Math.abs(gap);
   const gapRow = gap <= 0
     ? `<div class="dd-gap-row good">✅ 今日自然缺口 ${gapAbs} kcal，运动是加分项 💪</div>`
     : `<div class="dd-gap-row warn">⚠️ 超出基础代谢 ${gap} kcal，运动可消耗多余部分</div>`;
-
   const defaultsNote = usingDefaults
     ? `<div style="font-size:10px;color:var(--mu);margin-top:4px;font-weight:700">* 基于默认数据估算，建议在设置中填写身高、年龄并记录体重</div>`
     : '';
 
-  // Exercise rows — based on gap (only if gap > 0, else show rest day encouragement)
-  let exSection = '';
+  let exRefSection = '';
   if (gap > 0) {
-    const walkMin  = Math.round(gap / 4.5);
-    const walkKm   = (walkMin * 0.1).toFixed(1);
-    const runMin   = Math.round(gap / 8);
-    const runKm    = (runMin / 6).toFixed(1);
-    const danceMin = Math.round(gap / 6.5);
-    const plankMin = Math.round(gap / 5.5);
-
-    const rows = [
-      { icon:'🚶', name:'快走',     min:walkMin,  km:walkKm },
-      { icon:'🏃', name:'跑步',     min:runMin,   km:runKm  },
-      { icon:'💃', name:'跳操',     min:danceMin, km:null   },
-      { icon:'🧘', name:'平板支撑', min:plankMin, km:null   },
-    ].map(r => `
+    const walkMin=Math.round(gap/4.5), runMin=Math.round(gap/8);
+    const rows=[
+      {icon:'🚶',name:'快走',    min:walkMin, km:(walkMin*0.1).toFixed(1)},
+      {icon:'🏃',name:'跑步',    min:runMin,  km:(runMin/6).toFixed(1)},
+      {icon:'💃',name:'跳操',    min:Math.round(gap/6.5), km:null},
+      {icon:'🧘',name:'平板支撑',min:Math.round(gap/5.5), km:null},
+    ].map(r=>`
       <div class="dd-ex-row">
         <span class="dd-ex-name">${r.icon} ${r.name}</span>
-        <span class="dd-ex-km">${r.km ? r.km+' km' : ''}</span>
+        <span class="dd-ex-km">${r.km?r.km+' km':''}</span>
         <span class="dd-ex-min">${r.min} 分钟</span>
       </div>`).join('');
+    exRefSection = `<div style="font-size:11px;font-weight:800;color:var(--mu);margin:10px 0 6px;letter-spacing:.5px">🔥 消耗多余热量需要：</div>${rows}`;
+  }
 
-    exSection = `
-      <div style="font-size:11px;font-weight:800;color:var(--mu);margin:10px 0 6px;letter-spacing:.5px">🔥 消耗多余热量需要：</div>
-      ${rows}`;
+  const exLog = S.exercises[dateStr] || [];
+  const totalExKcal = exLog.reduce((s,e)=>s+(e.kcal||0),0);
+  const netGap = gap - totalExKcal;
+  let exLogHtml = '';
+  if (exLog.length) {
+    const rows = exLog.map((e,i)=>`
+      <div class="dd-ex-log">
+        <span>${e.icon} ${e.type} ${e.min}分钟</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span class="dd-ex-log-kcal">-${e.kcal} kcal</span>
+          <button class="mc-dish-del" onclick="deleteExercise('${dateStr}',${i})">✕</button>
+        </span>
+      </div>`).join('');
+    const netRow = `<div class="dd-gap-row ${netGap<=0?'good':'warn'}" style="margin-top:8px">
+      ${netGap<=0?`🎉 净缺口 ${Math.abs(netGap)} kcal，今天做得很好！`:`运动后还需再消耗 ${netGap} kcal`}
+    </div>`;
+    exLogHtml = `
+      <div style="font-size:11px;font-weight:800;color:var(--mu);margin:10px 0 6px;letter-spacing:.5px">💪 今日运动记录</div>
+      ${rows}${netRow}`;
   }
 
   document.getElementById('ddContent').innerHTML = `
     <div class="dd-sum"><span class="dd-sum-lbl">🍽️ 餐食摄入</span><span style="font-size:14px;font-weight:800;color:var(--mu)">${mealKcal} kcal</span></div>
-    ${snackKcal ? `<div class="dd-sum" style="margin-top:2px"><span class="dd-sum-lbl">🍬 零食摄入</span><span style="font-size:14px;font-weight:800;color:var(--mu)">${snackKcal} kcal</span></div>` : ''}
+    ${snackKcal?`<div class="dd-sum" style="margin-top:2px"><span class="dd-sum-lbl">🍬 零食摄入</span><span style="font-size:14px;font-weight:800;color:var(--mu)">${snackKcal} kcal</span></div>`:''}
     <div class="dd-sum" style="border-top:2px solid var(--br);margin-top:4px;padding-top:8px">
       <span class="dd-sum-lbl" style="font-weight:900">今日总摄入</span>
       <span class="dd-sum-val${kcal>goal?' over':''}">${kcal} kcal</span>
     </div>
     <div class="dd-sum" style="margin-top:2px"><span class="dd-sum-lbl">基础代谢 (BMR)</span><span style="font-size:15px;font-weight:800;color:var(--mu)">${bmr} kcal</span></div>
     ${gapRow}${defaultsNote}
-    ${exSection}
+    ${exRefSection}
+    ${exLogHtml}
+    <div style="display:flex;gap:8px;margin-top:12px">${recBtn}</div>
     ${jumpBtn}`;
-
   showModal('dayDetailModal');
 }
+
 
 // ══════════════════════════════════════════════
 //  SETTINGS
