@@ -9,7 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
-:root {
+button,input,textarea,select,[onclick]{touch-action:manipulation}
+:root{
   --mb:#3dbf87; --md:#6dd5a8; --ml:#b8f0d8;
   --lb:#7b6ee8; --ld:#b89ee8; --ll:#e0d4f7;
   --yb:#e8c030; --yl:#fff3b0;
@@ -267,7 +268,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
 .topt.sel{background:var(--ml);border-color:var(--md);color:#1a6a48}
 
 /* ── MODALS ── */
-.overlay{position:fixed;inset:0;background:rgba(60,60,80,.4);backdrop-filter:blur(4px);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.overlay{position:fixed;inset:0;background:rgba(60,60,80,.45);z-index:200;display:none;align-items:flex-end;justify-content:center}
 .overlay.show{display:flex}
 .mbox{background:var(--bg);border-radius:22px 22px 0 0;padding:18px;width:100%;max-width:430px;max-height:92vh;overflow-y:auto;animation:su .3s ease}
 @keyframes su{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
@@ -511,8 +512,12 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
     <input class="inp" type="number" id="ageIn" placeholder="如：28" style="margin-bottom:8px">
     <span class="clbl">🚫 饮食禁忌 / 过敏</span>
     <textarea class="inp" id="avoidIn" rows="2" style="resize:none" placeholder="如：不吃辣、海鲜过敏..."></textarea>
-    <span class="clbl" style="margin-top:10px">🎯 减重目标</span>
-    <textarea class="inp" id="goalIn" rows="2" style="resize:none" placeholder="如：现在90kg，目标75kg..."></textarea>
+    <span class="clbl" style="margin-top:10px">🎯 目标体重 (kg)</span>
+    <div class="row2" style="margin-bottom:6px">
+      <div><input class="inp" type="number" id="goalIn" placeholder="如：65" step="0.5" oninput="clearGoalAdvice()"></div>
+      <div><button class="ai-btn" id="goalAiBtn" onclick="aiEstimateCalories()" style="width:100%;padding:8px">🤖 AI估算每日热量</button></div>
+    </div>
+    <div id="goalAdvice" style="font-size:11px;font-weight:700;color:var(--mb);line-height:1.7;min-height:0"></div>
   </div>
   <div class="card">
     <span class="clbl">🤖 AI 接口设置（卡路里估算）</span>
@@ -756,7 +761,7 @@ const DEFAULTS = {
   recipeTags:  ['主食','主菜','蔬菜','汤品','甜点'],
   settings: {
     calories:1400, snackLimit:3,
-    height:0, avoidFood:'', weightGoal:'', age:0,
+    height:0, avoidFood:'', weightGoal:0, age:0, goalAdviceTxt:'',
     apiKey:'', apiProvider:'siliconflow'
   }
 };
@@ -820,6 +825,11 @@ function load() {
       S.snacks = flatSnacks;
       // Migration: ensure exercises exists
       if (!S.exercises || typeof S.exercises !== 'object' || Array.isArray(S.exercises)) S.exercises = {};
+      // Migration: weightGoal string → number
+      if (S.settings.weightGoal && typeof S.settings.weightGoal === 'string') {
+        const wgParsed = parseFloat(S.settings.weightGoal);
+        S.settings.weightGoal = isNaN(wgParsed) ? 0 : wgParsed;
+      }
     }
   } catch(e) { console.warn('Load error', e); }
 }
@@ -1046,6 +1056,20 @@ window.addEventListener('DOMContentLoaded', () => {
 //  TABS
 // ══════════════════════════════════════════════
 function switchTab(name, el) {
+  // Auto-save basic profile fields when leaving settings
+  if (document.getElementById('page-settings').classList.contains('active')) {
+    const h = parseFloat(document.getElementById('heightIn').value) || 0;
+    const a = parseInt(document.getElementById('ageIn').value) || 0;
+    const g = parseFloat(document.getElementById('goalIn').value) || 0;
+    const av = document.getElementById('avoidIn').value;
+    if (h !== S.settings.height || a !== S.settings.age || g !== S.settings.weightGoal || av !== S.settings.avoidFood) {
+      S.settings.height = h;
+      S.settings.age = a;
+      S.settings.weightGoal = g;
+      S.settings.avoidFood = av;
+      save();
+    }
+  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
@@ -1883,8 +1907,7 @@ function updateBMI(){
   document.getElementById('bmiCls').style.color=bg;
   const pct=Math.min(100,Math.max(0,(bmi-15)/(35-15)*100));
   document.getElementById('bmiPtr').style.left=pct+'%';
-  document.getElementById('curWtGoal').textContent=S.settings.weightGoal?`目标：${S.settings.weightGoal}`:'';
-}
+  document.getElementById('curWtGoal').textContent=S.settings.weightGoal?`目标：${S.settings.weightGoal} kg`:'';}
 
 function changeMonth(d) {
   calViewMonthNum += d;
@@ -2213,6 +2236,8 @@ function loadSettingsUI() {
   document.getElementById('ageIn').value     = s.age       ||'';
   document.getElementById('avoidIn').value   = s.avoidFood ||'';
   document.getElementById('goalIn').value    = s.weightGoal||'';
+  const adv = document.getElementById('goalAdvice');
+  if (adv) adv.innerHTML = s.goalAdviceTxt||'';
   document.getElementById('apiKeyIn').value  = s.apiKey    ||'';
   document.querySelectorAll('.prov-opt').forEach(el=>
     el.classList.toggle('active', el.dataset.p===s.apiProvider)
@@ -2228,6 +2253,9 @@ function adj(key,delta){
   const [mn,mx]=lims[key];
   S.settings[key]=Math.max(mn,Math.min(mx,(S.settings[key]||0)+delta));
   const el=document.getElementById('sv-'+key); if(el) el.textContent=S.settings[key];
+  save();
+  if(key==='calories') document.getElementById('goalEl').textContent=S.settings.calories+' kcal';
+  if(key==='snackLimit') document.getElementById('snkLimit').textContent=S.settings.snackLimit;
 }
 function selProv(el){
   document.querySelectorAll('.prov-opt').forEach(e=>e.classList.remove('active'));
@@ -2240,7 +2268,7 @@ function saveSettings(){
   s.height     = parseFloat(document.getElementById('heightIn').value)||0;
   s.age        = parseInt(document.getElementById('ageIn').value)||0;
   s.avoidFood  = document.getElementById('avoidIn').value;
-  s.weightGoal = document.getElementById('goalIn').value;
+  s.weightGoal = parseFloat(document.getElementById('goalIn').value)||0;
   s.apiKey     = document.getElementById('apiKeyIn').value.trim();
   const prov=document.querySelector('.prov-opt.active')?.dataset?.p;
   if(prov) s.apiProvider=prov;
@@ -2298,8 +2326,76 @@ async function aiEstimateKcal(name, ings, callback, btn) {
 }
 
 // ══════════════════════════════════════════════
-//  THEME
+//  AI CALORIE GOAL ESTIMATION
 // ══════════════════════════════════════════════
+function clearGoalAdvice() {
+  const el = document.getElementById('goalAdvice');
+  if (el) el.innerHTML = '';
+  S.settings.goalAdviceTxt = '';
+}
+async function aiEstimateCalories() {
+  const { apiKey, apiProvider } = S.settings;
+  if (!apiKey) { toast('请先在设置中填写 API Key'); return; }
+  const h   = parseFloat(document.getElementById('heightIn').value) || S.settings.height;
+  const age = parseInt(document.getElementById('ageIn').value)      || S.settings.age;
+  const g   = parseFloat(document.getElementById('goalIn').value)   || 0;
+  if (!h || !age) { toast('请先填写身高和年龄'); return; }
+  if (!g)         { toast('请先填写目标体重'); return; }
+  const latest = S.weights[0];
+  if (!latest)    { toast('请先在数据页记录当前体重'); return; }
+
+  const btn = document.getElementById('goalAiBtn');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
+
+  const diff = (latest.kg - g).toFixed(1);
+  const bmi  = (latest.kg / ((h / 100) ** 2)).toFixed(1);
+  const prompt = `用户：${age}岁，身高${h}cm，当前体重${latest.kg}kg，BMI${bmi}，目标体重${g}kg，需减重${diff}kg。请给出建议每日摄入热量（kcal）、预计达标周数、一句简短饮食建议。只返回JSON：{"kcal":数字,"weeks":数字,"tip":"建议文字不超过20字"}，不要其他任何内容。`;
+
+  const conf = API_CONF[apiProvider];
+  try {
+    let text = '';
+    if (apiProvider === 'claude') {
+      const res = await fetch(conf.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: conf.model, max_tokens: 120, messages: [{ role: 'user', content: prompt }] })
+      });
+      const d = await res.json();
+      text = d.content?.[0]?.text?.trim() || '';
+    } else {
+      const res = await fetch(conf.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({ model: conf.model, max_tokens: 120, messages: [{ role: 'user', content: prompt }] })
+      });
+      const d = await res.json();
+      text = d.choices?.[0]?.message?.content?.trim() || '';
+    }
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    const { kcal, weeks, tip } = parsed;
+    if (kcal > 0) {
+      S.settings.calories = kcal;
+      const adviceHtml = `🎯 建议每日摄入 <strong>${kcal} kcal</strong>，预计 <strong>${weeks}</strong> 周达标<br>💡 ${tip}`;
+      S.settings.goalAdviceTxt = adviceHtml;
+      document.getElementById('sv-calories').textContent = kcal;
+      document.getElementById('goalEl').textContent = kcal + ' kcal';
+      document.getElementById('goalAdvice').innerHTML = adviceHtml;
+      save();
+      toast(`✅ 已自动更新每日目标为 ${kcal} kcal`);
+    } else {
+      toast('AI返回格式异常，请手动设置');
+    }
+  } catch(e) {
+    console.warn('AI calories error', e);
+    toast('AI估算失败，请检查 API Key');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+}
 function buildThemeGrid(){
   const g=document.getElementById('themeGrid'); if(!g) return;
   THEMES.forEach((t,i)=>{
