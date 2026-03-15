@@ -1101,24 +1101,29 @@ function switchFood(name, el) {
 function renderWeekDots() {
   const c = document.getElementById('wdots'); c.innerHTML='';
 
-  // Week nav — show date range only, no relative label
+  // Week nav — year label (subtle, only when needed) + date row (nowrap, always stable)
   const ws = getWeekStart();
   const we = new Date(ws); we.setDate(ws.getDate() + 6);
   const thisYear = new Date().getFullYear();
-  const fmt = (date, forceYear) => {
-    const y = date.getFullYear();
-    const prefix = (forceYear || y !== thisYear) ? `${y}年` : '';
-    return `${prefix}${date.getMonth()+1}月${date.getDate()}日`;
-  };
-  const crossYear = ws.getFullYear() !== we.getFullYear();
-  const dateRange = `${fmt(ws, crossYear)} – ${fmt(we, crossYear)}`;
+  const wy = ws.getFullYear(), ey = we.getFullYear();
+  const crossYear = wy !== ey;
+  const needYear = crossYear || wy !== thisYear;
+  // Year label: "2025年" / "2025年–2026年" / hidden
+  const yearLbl = !needYear ? '' :
+    crossYear ? `${wy}年–${ey}年` : `${wy}年`;
+  // Date range: always month+day only, never breaks layout
+  const fmt = d => `${d.getMonth()+1}月${d.getDate()}日`;
+  const dateRange = `${fmt(ws)} – ${fmt(we)}`;
 
   const nav = document.createElement('div');
-  nav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:7px;gap:6px';
+  nav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:7px;gap:4px';
   nav.innerHTML = `
-    <button class="nbtn" onclick="changeWeek(-1)" style="flex-shrink:0">«</button>
-    <span style="font-size:11px;font-weight:800;color:var(--tx);text-align:center;flex:1">${dateRange}</span>
-    <button class="nbtn" onclick="changeWeek(1)" style="flex-shrink:0">»</button>`;
+    <button class="nbtn" onclick="changeWeek(-1)" style="flex-shrink:0;width:28px;height:28px;font-size:14px">«</button>
+    <div style="flex:1;text-align:center;min-width:0">
+      ${yearLbl ? `<div style="font-size:9px;font-weight:700;color:var(--mu);line-height:1.3;letter-spacing:.3px">${yearLbl}</div>` : ''}
+      <div style="font-size:11px;font-weight:800;color:var(--tx);white-space:nowrap">${dateRange}</div>
+    </div>
+    <button class="nbtn" onclick="changeWeek(1)" style="flex-shrink:0;width:28px;height:28px;font-size:14px">»</button>`;
   c.appendChild(nav);
 
   // Day dots row
