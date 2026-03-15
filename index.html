@@ -151,7 +151,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
 .kcal-cal-cell.no-data{background:#f4f4f7}
 .kcal-cal-cell.under{background:#d4f4e4;border:1px solid var(--md)}
 .kcal-cal-cell.over{background:#ffd4d4;border:1px solid #f0a0a0}
-.kcal-cal-cell.future{background:#f4f4f7;opacity:.5;cursor:default}
+.kcal-cal-cell.future{background:#f4f4f7}
 .kcal-cal-cell.today-cell{box-shadow:0 0 0 2px var(--mb)}
 .cal-day-num{font-size:9px;font-weight:800;color:var(--mu)}
 .cal-day-kcal{font-size:8px;font-weight:900;line-height:1.2;text-align:center}
@@ -379,9 +379,12 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
       <span class="clbl" style="margin:0">月度热量总览</span>
-      <div style="display:flex;gap:6px;align-items:center">
-        <button class="btn" onclick="changeMonth(-1)">‹</button>
-        <span id="calMonthLabel" style="font-size:12px;font-weight:800"></span>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button class="btn" onclick="changeYear(-1)">‹</button>
+        <span id="calYearLabel" style="font-size:12px;font-weight:800;min-width:42px;text-align:center"></span>
+        <button class="btn" onclick="changeYear(1)">›</button>
+        <button class="btn" onclick="changeMonth(-1)" style="margin-left:4px">‹</button>
+        <span id="calMonthNumLabel" style="font-size:12px;font-weight:800;min-width:26px;text-align:center"></span>
         <button class="btn" onclick="changeMonth(1)">›</button>
       </div>
     </div>
@@ -1008,11 +1011,15 @@ function dk(date) {
 }
 
 let currentDayOffset = 0;
+let currentWeekOffset = 0; // 0 = this week, -1 = last week, +1 = next week, unlimited
+
 function getWeekStart() {
   const today = new Date();
   const dow = today.getDay();
   const diff = (dow === 0 ? -6 : 1 - dow);
-  const ws = new Date(today); ws.setDate(today.getDate() + diff); ws.setHours(0,0,0,0);
+  const ws = new Date(today);
+  ws.setDate(today.getDate() + diff + currentWeekOffset * 7);
+  ws.setHours(0,0,0,0);
   return ws;
 }
 function getDayKey(offset) {
@@ -1093,6 +1100,30 @@ function switchFood(name, el) {
 // ══════════════════════════════════════════════
 function renderWeekDots() {
   const c = document.getElementById('wdots'); c.innerHTML='';
+
+  // Week nav — show date range only, no relative label
+  const ws = getWeekStart();
+  const we = new Date(ws); we.setDate(ws.getDate() + 6);
+  const thisYear = new Date().getFullYear();
+  const fmt = (date, forceYear) => {
+    const y = date.getFullYear();
+    const prefix = (forceYear || y !== thisYear) ? `${y}年` : '';
+    return `${prefix}${date.getMonth()+1}月${date.getDate()}日`;
+  };
+  const crossYear = ws.getFullYear() !== we.getFullYear();
+  const dateRange = `${fmt(ws, crossYear)} – ${fmt(we, crossYear)}`;
+
+  const nav = document.createElement('div');
+  nav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:7px;gap:6px';
+  nav.innerHTML = `
+    <button class="nbtn" onclick="changeWeek(-1)" style="flex-shrink:0">«</button>
+    <span style="font-size:11px;font-weight:800;color:var(--tx);text-align:center;flex:1">${dateRange}</span>
+    <button class="nbtn" onclick="changeWeek(1)" style="flex-shrink:0">»</button>`;
+  c.appendChild(nav);
+
+  // Day dots row
+  const dots = document.createElement('div');
+  dots.style.cssText = 'display:flex;justify-content:center;gap:5px;width:100%';
   for (let i=0; i<7; i++) {
     const dayKey = getDayKey(i);
     const hasPlan = S.plan[dayKey] && MTYPES.some(t => (S.plan[dayKey][t]||[]).length > 0);
@@ -1100,15 +1131,20 @@ function renderWeekDots() {
     div.className = 'wdot' + (i===currentDayOffset ? ' cur' : hasPlan ? ' has' : '');
     div.textContent = DAYS[i];
     div.onclick = () => { currentDayOffset=i; renderWeekDots(); renderDay(); };
-    c.appendChild(div);
+    dots.appendChild(div);
   }
+  c.appendChild(dots);
 }
 
 function renderDay() {
   const dayKey = getDayKey(currentDayOffset);
   const ws = getWeekStart();
   const d  = new Date(ws); d.setDate(ws.getDate() + currentDayOffset);
-  document.getElementById('dname').textContent = `周${DAYS[currentDayOffset]}`;
+  const isThisWeek = currentWeekOffset === 0;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const isToday = dk(d) === dk(today);
+  const dayLabel = isToday ? '今天' : `周${DAYS[currentDayOffset]}`;
+  document.getElementById('dname').textContent = dayLabel;
   document.getElementById('ddate').textContent = `${d.getMonth()+1}月${d.getDate()}日`;
 
   const plan = S.plan[dayKey] || {};
@@ -1210,7 +1246,21 @@ function updateStreak() {
 }
 
 function changeDay(d) {
-  currentDayOffset = Math.max(0, Math.min(6, currentDayOffset + d));
+  const next = currentDayOffset + d;
+  if (next < 0) {
+    currentWeekOffset--;
+    currentDayOffset = 6;
+  } else if (next > 6) {
+    currentWeekOffset++;
+    currentDayOffset = 0;
+  } else {
+    currentDayOffset = next;
+  }
+  renderWeekDots(); renderDay();
+}
+
+function changeWeek(d) {
+  currentWeekOffset += d;
   renderWeekDots(); renderDay();
 }
 
@@ -1909,6 +1959,11 @@ function updateBMI(){
   document.getElementById('bmiPtr').style.left=pct+'%';
   document.getElementById('curWtGoal').textContent=S.settings.weightGoal?`目标：${S.settings.weightGoal} kg`:'';}
 
+function changeYear(d) {
+  calViewYear += d;
+  renderCalendar();
+}
+
 function changeMonth(d) {
   calViewMonthNum += d;
   if (calViewMonthNum > 11) { calViewMonthNum=0; calViewYear++; }
@@ -1918,7 +1973,11 @@ function changeMonth(d) {
 
 function renderCalendar() {
   if (calViewYear===undefined) initCalView();
-  document.getElementById('calMonthLabel').textContent = `${calViewYear}年${calViewMonthNum+1}月`;
+  // Update split year / month labels
+  const yl = document.getElementById('calYearLabel');
+  const ml = document.getElementById('calMonthNumLabel');
+  if (yl) yl.textContent = calViewYear+'年';
+  if (ml) ml.textContent = (calViewMonthNum+1)+'月';
 
   const year=calViewYear, month=calViewMonthNum;
   const daysInMonth = new Date(year, month+1, 0).getDate();
@@ -1988,8 +2047,8 @@ function renderCalendar() {
       ${kcal>0 ? `<span class="cal-day-kcal ${kcalClass}">${kcal}</span>` : ''}
       ${iconHtml}`;
 
-    // All non-future cells open the detail modal
-    if (!isFuture) {
+    // All cells (past, today, future) open the detail modal
+    {
       const mealKcal = (() => {
         const p=S.plan[dateStr]||{}, c=S.checkins[dateStr]||{};
         return MTYPES.reduce((s,mt)=>c[mt]?(s+(p[mt]||[]).reduce((a,d)=>a+(d.kcal||0),0)):s,0);
@@ -2111,11 +2170,28 @@ function deleteExercise(dateStr, i) {
   openDayDetail(y, m-1, d, mealKcal, snackKcal, S.settings.calories);
 }
 
-// Jump helper: offset=-1 means just switch to plan tab (today), else navigate to that day
-function ddJumpToPlan(offset) {
+// Jump to plan page at a specific date (dateStr = "YYYY-MM-DD")
+function ddJumpToPlan(dateStr) {
   hideModal('dayDetailModal');
-  if (offset >= 0) {
-    currentDayOffset = offset;
+  if (dateStr) {
+    // Calculate which week and day offset the target date sits in
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayDow = today.getDay();
+    // Monday of this (real) week
+    const thisWeekMon = new Date(today);
+    thisWeekMon.setDate(today.getDate() + (todayDow === 0 ? -6 : 1 - todayDow));
+
+    const target = new Date(dateStr + 'T00:00:00');
+    const targetDow = target.getDay(); // 0=Sun…6=Sat
+    // Monday of the target's week
+    const targetWeekMon = new Date(target);
+    targetWeekMon.setDate(target.getDate() + (targetDow === 0 ? -6 : 1 - targetDow));
+
+    // Week offset = difference in full weeks between the two Mondays
+    const msPerWeek = 7 * 24 * 3600 * 1000;
+    currentWeekOffset = Math.round((targetWeekMon - thisWeekMon) / msPerWeek);
+    // Day offset within that week (Mon=0 … Sun=6)
+    currentDayOffset = (targetDow === 0 ? 6 : targetDow - 1);
     renderWeekDots(); renderDay();
   }
   const t = document.querySelector('.tab[onclick*="plan"]');
@@ -2140,10 +2216,7 @@ function openDayDetail(year, month, day, mealKcal, snackKcal, goal) {
   const dow = new Date(year, month, day).getDay();
   document.getElementById('ddTitle').textContent = `${month+1}月${day}日 · 周${WEEK_DAYS[dow]}`;
 
-  const ws     = getWeekStart();
-  const diff2  = Math.round((new Date(year, month, day) - ws) / 86400000);
-  const inWeek = diff2 >= 0 && diff2 < 7;
-  const jumpBtn = `<button class="dd-jump-btn" onclick="ddJumpToPlan(${inWeek ? diff2 : -1})">${inWeek ? '→ 查看当天计划' : '→ 前往计划页'}</button>`;
+  const jumpBtn = `<button class="dd-jump-btn" onclick="ddJumpToPlan('${dateStr}')">→ 查看当天计划</button>`;
   const recBtn  = `<button class="dd-rec-btn" onclick="openExerciseModal('${dateStr}')">💪 记录运动</button>`;
 
   if (!kcal) {
