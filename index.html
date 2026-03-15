@@ -200,9 +200,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
 .rftag.active{background:var(--ll);border-color:var(--ld);color:#4a38a0}
 
 /* ── SNACK PAGE ── */
-.mtabs{display:flex;gap:5px;margin-bottom:11px;overflow-x:auto;padding-bottom:2px}
-.mtab{flex-shrink:0;border:1.5px solid var(--br);background:#fff;border-radius:20px;padding:4px 11px;font-size:11px;font-weight:800;cursor:pointer;color:var(--mu);font-family:'Nunito',sans-serif}
-.mtab.active{background:var(--ll);border-color:var(--ld);color:#4a38a0}
+
 .snk-stat{background:linear-gradient(135deg,var(--kl) 0%,var(--ll) 100%);border-radius:var(--r);padding:13px;margin-bottom:10px}
 .snk-num{font-size:26px;font-weight:900;color:var(--kb)}
 .ex-card{background:#fff;border-radius:var(--rs);padding:11px;border:1px solid var(--br);margin-top:9px}
@@ -451,7 +449,6 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
 <!-- ══ SNACK PAGE ══ -->
 <div id="page-snack" class="page">
   <div class="sec">🍬 零食记录</div>
-  <div class="mtabs" id="memberTabs"></div>
   <div class="snk-stat">
     <div style="display:flex;justify-content:space-between">
       <div>
@@ -500,10 +497,6 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
       <div><div class="set-lbl">每周零食限额</div><div class="set-sub">偶尔吃一点也没关系</div></div>
       <div class="stepper"><button class="spbtn" onclick="adj('snackLimit',-1)">−</button><div class="set-val" id="sv-snackLimit">3</div><button class="spbtn" onclick="adj('snackLimit',1)">+</button></div>
     </div>
-    <div class="set-row">
-      <div><div class="set-lbl">几人份</div><div class="set-sub">菜量参考</div></div>
-      <div class="stepper"><button class="spbtn" onclick="adj('servings',-1)">−</button><div class="set-val" id="sv-servings">2</div><span style="font-size:11px;color:var(--mu);font-weight:700">人</span><button class="spbtn" onclick="adj('servings',1)">+</button></div>
-    </div>
   </div>
   <div class="card">
     <span class="clbl">身高（BMI 及 BMR 计算用）</span>
@@ -514,15 +507,6 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
     <textarea class="inp" id="avoidIn" rows="2" style="resize:none" placeholder="如：不吃辣、海鲜过敏..."></textarea>
     <span class="clbl" style="margin-top:10px">🎯 减重目标</span>
     <textarea class="inp" id="goalIn" rows="2" style="resize:none" placeholder="如：现在90kg，目标75kg..."></textarea>
-  </div>
-  <div class="card">
-    <span class="clbl">👥 共同用餐成员</span>
-    <div id="memberList" style="margin-bottom:8px"></div>
-    <div class="add-row">
-      <input class="inp" id="memberIn" placeholder="成员名称" onkeydown="if(event.key==='Enter')addMember()">
-      <button class="add-btn" onclick="addMember()">添加</button>
-    </div>
-    <p class="note">🍽️ 饮食计划共享，🍬 零食可按人分开记录</p>
   </div>
   <div class="card">
     <span class="clbl">🤖 AI 接口设置（卡路里估算）</span>
@@ -736,10 +720,9 @@ const DEFAULTS = {
   weights:     [],
   snacks:      {},
   snackLib:    [],
-  members:     ['我'],
   recipeTags:  ['主食','主菜','蔬菜','汤品','甜点'],
   settings: {
-    calories:1400, snackLimit:3, servings:2,
+    calories:1400, snackLimit:3,
     height:0, avoidFood:'', weightGoal:'', age:0,
     apiKey:'', apiProvider:'siliconflow'
   }
@@ -753,14 +736,13 @@ let pickSelected = new Set(); // recipe ids
 let pickTagFilter= '全部';
 let pickToKcals  = {}; // takeout name → kcal override
 let rcEditId     = null; // recipe being edited
-let curMember    = '我';
 let calViewYear, calViewMonthNum;
 let rcTagFilter  = '全部'; // recipe list filter
 
 // ══════════════════════════════════════════════
 //  PERSISTENCE
 // ══════════════════════════════════════════════
-const LS_KEY = 'eatwhat_v24';
+const LS_KEY = 'eatwhat_v25';
 
 function save() {
   // Never sync apiKey to cloud
@@ -792,6 +774,17 @@ function load() {
       }
       // Migration: ensure takeouts have kcal field
       S.takeouts = S.takeouts.map(t => ({name:t.name, kcal:t.kcal||0}));
+      // Migration: flatten snacks from {date:{member:[]}} → {date:[]} (v24→v25)
+      const flatSnacks = {};
+      Object.keys(S.snacks).forEach(date => {
+        const v = S.snacks[date];
+        if (Array.isArray(v)) { flatSnacks[date] = v; }
+        else if (v && typeof v === 'object') {
+          // merge all members' entries into one array
+          flatSnacks[date] = Object.values(v).flat();
+        }
+      });
+      S.snacks = flatSnacks;
     }
   } catch(e) { console.warn('Load error', e); }
 }
@@ -878,7 +871,6 @@ async function pullFromCloud() {
       if (row.key==='recipeTags')  S.recipeTags  = v;
       if (row.key==='config') {
         const c = v;
-        if (c.members) S.members = c.members;
         if (c.settings) S.settings = Object.assign(S.settings, c.settings);
       }
     });
@@ -911,7 +903,7 @@ async function pushToCloud(immediate) {
       {key:'snacks',      value:JSON.stringify(S.snacks)},
       {key:'snackLib',    value:JSON.stringify(S.snackLib)},
       {key:'recipeTags',  value:JSON.stringify(S.recipeTags)},
-      {key:'config',      value:JSON.stringify({members:S.members, settings:safeSettings})},
+      {key:'config', value:JSON.stringify({settings:safeSettings})},
     ];
     const {error} = await sb.from('app_settings').upsert(rows, {onConflict:'key'});
     if (error) throw error;
@@ -1000,7 +992,6 @@ function renderAll() {
   renderIng();
   renderRecipeList();
   renderSnack();
-  renderMemberTabs();
   loadSettingsUI();
 }
 
@@ -1711,26 +1702,13 @@ function removeFruit(i) { S.ingredients.splice(i,1); save(); renderFruits(); }
 // ══════════════════════════════════════════════
 //  SNACK FUNCTIONS
 // ══════════════════════════════════════════════
-function renderMemberTabs() {
-  const c = document.getElementById('memberTabs'); if (!c) return;
-  c.innerHTML='';
-  S.members.forEach(m => {
-    const btn = document.createElement('button');
-    btn.className='mtab'+(m===curMember?' active':'');
-    btn.textContent='👤 '+m;
-    btn.onclick=()=>{curMember=m; document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderSnack();};
-    c.appendChild(btn);
-  });
-}
 function renderSnack() {
-  renderMemberTabs();
   const today = dk(new Date());
   const ws = getWeekStart();
   let weekCount=0, weekKcal=0;
   for(let i=0;i<7;i++){
     const d=new Date(ws); d.setDate(ws.getDate()+i);
-    const k=dk(d);
-    const entries=(S.snacks[k]?.[curMember]||[]);
+    const entries=(S.snacks[dk(d)]||[]);
     weekCount+=entries.length;
     weekKcal+=entries.reduce((s,e)=>s+(e.kcal||0),0);
   }
@@ -1747,7 +1725,7 @@ function renderSnack() {
   } else exCard.style.display='none';
   // Today log
   const log=document.getElementById('snkTodayLog'); log.innerHTML='';
-  const todayEntries=S.snacks[today]?.[curMember]||[];
+  const todayEntries=S.snacks[today]||[];
   if(!todayEntries.length){
     log.innerHTML='<div class="empty"><span class="e">🍬</span>今天还没有零食记录</div>';
   } else {
@@ -1768,7 +1746,6 @@ function renderSnack() {
 function showSnackModal() {
   document.getElementById('snkName').value='';
   document.getElementById('snkKcalIn').value='';
-  // Quick select from lib
   const qs=document.getElementById('snkQuickSel'); qs.innerHTML='';
   S.snackLib.forEach(s=>{
     const btn=document.createElement('button');
@@ -1789,15 +1766,14 @@ function logSnack() {
   const kcal=parseInt(document.getElementById('snkKcalIn').value)||0;
   if(!name){toast('请填写零食名称');return;}
   const today=dk(new Date());
-  if(!S.snacks[today]) S.snacks[today]={};
-  if(!S.snacks[today][curMember]) S.snacks[today][curMember]=[];
+  if(!S.snacks[today]) S.snacks[today]=[];
   const now=new Date();
-  S.snacks[today][curMember].push({name,kcal,time:`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`});
+  S.snacks[today].push({name,kcal,time:`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`});
   save(); hideModal('snackModal'); renderSnack();
   toast('🍬 已记录！');
 }
 function deleteSnk(dayKey, i) {
-  S.snacks[dayKey]?.[curMember]?.splice(i,1);
+  S.snacks[dayKey]?.splice(i,1);
   save(); renderSnack();
 }
 function addSnkLib() {
@@ -1902,6 +1878,8 @@ function renderCalendar() {
     const plan=S.plan[dateStr]||{}, ci=S.checkins[dateStr]||{};
     let kcal=0;
     MTYPES.forEach(mt=>{ if(ci[mt]) (plan[mt]||[]).forEach(dish=>kcal+=(dish.kcal||0)); });
+    // Add snack kcal for this day
+    kcal += (S.snacks[dateStr]||[]).reduce((s,e)=>s+(e.kcal||0),0);
     dayData[dateStr] = kcal;
     const isFuture = dateStr > today;
     if (!isFuture && kcal>0) { daysWithData++; totalEaten+=kcal; if(kcal<=goal) daysUnder++; else daysOver++; }
@@ -1948,7 +1926,12 @@ function renderCalendar() {
 
     // All non-future cells open the detail modal
     if (!isFuture) {
-      cell.onclick = () => openDayDetail(year, month, d, kcal, goal);
+      const mealKcal = (() => {
+        const p=S.plan[dateStr]||{}, c=S.checkins[dateStr]||{};
+        return MTYPES.reduce((s,mt)=>c[mt]?(s+(p[mt]||[]).reduce((a,d)=>a+(d.kcal||0),0)):s,0);
+      })();
+      const snackKcal = (S.snacks[dateStr]||[]).reduce((s,e)=>s+(e.kcal||0),0);
+      cell.onclick = () => openDayDetail(year, month, d, mealKcal, snackKcal, goal);
     }
     gridEl.appendChild(cell);
   }
@@ -1988,7 +1971,8 @@ function calcBMR() {
   return { bmr, usingDefaults };
 }
 
-function openDayDetail(year, month, day, kcal, goal) {
+function openDayDetail(year, month, day, mealKcal, snackKcal, goal) {
+  const kcal = mealKcal + snackKcal;
   const dow = new Date(year, month, day).getDay();
   document.getElementById('ddTitle').textContent =
     `${month+1}月${day}日 · 周${WEEK_DAYS[dow]}`;
@@ -2054,16 +2038,14 @@ function openDayDetail(year, month, day, kcal, goal) {
   }
 
   document.getElementById('ddContent').innerHTML = `
-    <div class="dd-sum">
-      <span class="dd-sum-lbl">今日摄入</span>
+    <div class="dd-sum"><span class="dd-sum-lbl">🍽️ 餐食摄入</span><span style="font-size:14px;font-weight:800;color:var(--mu)">${mealKcal} kcal</span></div>
+    ${snackKcal ? `<div class="dd-sum" style="margin-top:2px"><span class="dd-sum-lbl">🍬 零食摄入</span><span style="font-size:14px;font-weight:800;color:var(--mu)">${snackKcal} kcal</span></div>` : ''}
+    <div class="dd-sum" style="border-top:2px solid var(--br);margin-top:4px;padding-top:8px">
+      <span class="dd-sum-lbl" style="font-weight:900">今日总摄入</span>
       <span class="dd-sum-val${kcal>goal?' over':''}">${kcal} kcal</span>
     </div>
-    <div class="dd-sum" style="margin-top:2px">
-      <span class="dd-sum-lbl">基础代谢 (BMR)</span>
-      <span style="font-size:15px;font-weight:800;color:var(--mu)">${bmr} kcal</span>
-    </div>
-    ${gapRow}
-    ${defaultsNote}
+    <div class="dd-sum" style="margin-top:2px"><span class="dd-sum-lbl">基础代谢 (BMR)</span><span style="font-size:15px;font-weight:800;color:var(--mu)">${bmr} kcal</span></div>
+    ${gapRow}${defaultsNote}
     ${exSection}
     ${jumpBtn}`;
 
@@ -2075,7 +2057,7 @@ function openDayDetail(year, month, day, kcal, goal) {
 // ══════════════════════════════════════════════
 function loadSettingsUI() {
   const s=S.settings;
-  ['calories','snackLimit','servings'].forEach(k=>{
+  ['calories','snackLimit'].forEach(k=>{
     const el=document.getElementById('sv-'+k); if(el) el.textContent=s[k];
   });
   document.getElementById('heightIn').value  = s.height    ||'';
@@ -2091,10 +2073,9 @@ function loadSettingsUI() {
   document.getElementById('sbUrlIn').value=url||'';
   document.getElementById('sbKeyIn').value=key||'';
   updateCloudStatus();
-  renderMemberList();
 }
 function adj(key,delta){
-  const lims={calories:[800,3000],snackLimit:[0,14],servings:[1,10]};
+  const lims={calories:[800,3000],snackLimit:[0,14]};
   const [mn,mx]=lims[key];
   S.settings[key]=Math.max(mn,Math.min(mx,(S.settings[key]||0)+delta));
   const el=document.getElementById('sv-'+key); if(el) el.textContent=S.settings[key];
@@ -2119,28 +2100,6 @@ function saveSettings(){
   document.getElementById('snkLimit').textContent=s.snackLimit;
   updateBMI();
   toast('💾 设置已保存！');
-}
-function renderMemberList(){
-  const c=document.getElementById('memberList'); if(!c) return;
-  c.innerHTML='';
-  S.members.forEach((m,i)=>{
-    const row=document.createElement('div'); row.className='member-row';
-    row.innerHTML=`<span>👤 ${m}</span>${S.members.length>1?`<button class="btn" onclick="delMember(${i})">移除</button>`:'<span style="font-size:10px;color:var(--mu)">（至少保留1位）</span>'}`;
-    c.appendChild(row);
-  });
-}
-function addMember(){
-  const el=document.getElementById('memberIn'), n=el.value.trim(); if(!n) return;
-  if(S.members.includes(n)){toast('已有该成员');return;}
-  if(S.members.length>=6){toast('最多6位成员');return;}
-  S.members.push(n); el.value='';
-  save(); renderMemberList(); renderMemberTabs(); toast(`✅ 已添加 ${n}`);
-}
-function delMember(i){
-  if(S.members.length<=1) return;
-  const name=S.members[i]; S.members.splice(i,1);
-  if(curMember===name) curMember=S.members[0];
-  save(); renderMemberList(); renderMemberTabs(); renderSnack();
 }
 
 // ══════════════════════════════════════════════
