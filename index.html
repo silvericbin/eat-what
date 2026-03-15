@@ -183,6 +183,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
 .rc-meta{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:4px;align-items:center}
 .rtag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px}
 .rc-ings{font-size:11px;color:var(--mu);font-weight:600}
+.rc-missing{font-size:10px;font-weight:800;color:var(--pb);margin-top:1px;margin-bottom:2px}
 .rc-acts{display:flex;gap:5px;margin-top:9px;border-top:1px solid var(--br);padding-top:9px}
 .rbtn{flex:1;background:var(--bg);border:1px solid var(--br);border-radius:7px;padding:5px;font-size:11px;font-weight:800;color:var(--mu);cursor:pointer;font-family:'Nunito',sans-serif}
 .rbtn.red{color:#e05050}
@@ -411,6 +412,8 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
     <div class="chips" id="toChips"></div>
     <div class="add-row">
       <input class="inp" id="toIn" placeholder="外卖店名/菜品" onkeydown="if(event.key==='Enter')addTO()">
+      <input class="inp inp-sm" id="toKcal" type="number" placeholder="kcal">
+      <button class="ai-btn" id="toLibAiBtn" onclick="aiEstimateTOLib()">AI</button>
       <button class="add-btn" onclick="addTO()">添加</button>
     </div>
   </div>
@@ -595,9 +598,9 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
       <button class="m-close" onclick="hideModal('recipeModal')">✕</button>
     </div>
     <span class="lbl">菜品名称</span>
-    <input class="inp" id="rcName" placeholder="如：番茄炒蛋" style="margin-bottom:8px">
+    <input class="inp" id="rcName" placeholder="如：番茄炒蛋" style="margin-bottom:8px" oninput="autoEmoji(this.value)">
     <span class="lbl">emoji 图标</span>
-    <input class="inp" id="rcEmoji" placeholder="如：🍳" style="margin-bottom:8px;max-width:80px">
+    <input class="inp" id="rcEmoji" placeholder="自动联想，可修改" style="margin-bottom:8px;max-width:120px" oninput="this.dataset.userSet='1'">
     <span class="lbl">热量 (kcal / 份)</span>
     <div class="row2" style="margin-bottom:8px">
       <div><input class="inp" id="rcKcal" type="number" placeholder="如：320"></div>
@@ -606,7 +609,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
     <span class="lbl">分类标签（可多选）</span>
     <div class="tag-sel" id="rcTagSel" style="margin-bottom:8px"></div>
     <span class="lbl">所需食材</span>
-    <div id="rcIngSel" style="margin-bottom:8px"></div>
+    <div class="chips" id="rcIngSel" style="margin-bottom:8px;min-height:10px"></div>
     <div class="add-row" style="margin-bottom:12px">
       <input class="inp" id="rcIngAdd" placeholder="搜索或输入食材" list="rcIngDatalist">
       <button class="add-btn" onclick="addRcIng()">添加</button>
@@ -741,7 +744,7 @@ let rcTagFilter  = '全部'; // recipe list filter
 // ══════════════════════════════════════════════
 //  PERSISTENCE
 // ══════════════════════════════════════════════
-const LS_KEY = 'eatwhat_v20';
+const LS_KEY = 'eatwhat_v22';
 
 function save() {
   // Never sync apiKey to cloud
@@ -771,6 +774,8 @@ function load() {
           }
         });
       }
+      // Migration: ensure takeouts have kcal field
+      S.takeouts = S.takeouts.map(t => ({name:t.name, kcal:t.kcal||0}));
     }
   } catch(e) { console.warn('Load error', e); }
 }
@@ -816,7 +821,7 @@ async function initCloud() {
   const {url,key} = loadCloudConfig();
   if (!url||!key) { setSyncDot('offline'); updateCloudStatus(); return; }
   try {
-    sb = supabase.createClient(url, key);
+    sb = supabase.createClient(url, key, { auth: { persistSession: false } });
     setSyncDot('syncing');
     await pullFromCloud();
     subscribeRealtime();
@@ -848,7 +853,7 @@ async function pullFromCloud() {
             S.ingredients.push({name:f.name,have:!!f.have,kcal:f.kcal||0,type:'fruit'});
         });
       }
-      if (row.key==='takeouts')    S.takeouts    = v;
+      if (row.key==='takeouts')    S.takeouts    = v.map(t=>({name:t.name,kcal:t.kcal||0}));
       if (row.key==='plan')        S.plan        = v;
       if (row.key==='checkins')    S.checkins    = v;
       if (row.key==='weights')     S.weights     = v;
@@ -1201,9 +1206,16 @@ function renderPickList() {
   }
 
   filtered.forEach(r => {
-    const avail = recipeAvail(r);
+    const {status, missing} = recipeAvail(r);
     const isSelected = pickSelected.has(r.id);
     const tags = (r.tags||[]).map(t=>`<span class="rtag" style="${tagStyle(t)}">${t}</span>`).join(' ');
+    const availBadge = status==='ok'
+      ? '<span class="avail-ok">✅ 可做</span>'
+      : status==='part'
+        ? `<span class="avail-part">⚠️ 部分</span>`
+        : `<span class="avail-no">❌ 缺料</span>`;
+    const missingHtml = missing.length
+      ? `<div class="rc-missing">缺：${missing.join('、')}</div>` : '';
     const div = document.createElement('div');
     div.className = 'pick-recipe' + (isSelected ? ' sel' : '');
     div.innerHTML = `
@@ -1214,8 +1226,9 @@ function renderPickList() {
         <div class="pick-recipe-meta">
           ${r.kcal ? r.kcal+' kcal' : '热量未知'}
           ${tags ? ' · '+tags : ''}
-          <span class="${avail==='ok'?'avail-ok':avail==='part'?'avail-part':'avail-no'}">${avail==='ok'?'✅ 可做':avail==='part'?'⚠️ 部分食材':'❌ 缺食材'}</span>
+          ${availBadge}
         </div>
+        ${missingHtml}
       </div>`;
     div.onclick = () => {
       if (pickSelected.has(r.id)) pickSelected.delete(r.id);
@@ -1237,6 +1250,9 @@ function renderPickToList() {
   }
   S.takeouts.forEach(to => {
     const isSel = pickToSelected.has(to.name);
+    // Pre-fill from library kcal if not yet overridden
+    if (isSel && pickToKcals[to.name] === undefined && to.kcal)
+      pickToKcals[to.name] = to.kcal;
     const storedKcal = pickToKcals[to.name] || '';
     const div = document.createElement('div');
     div.className = 'pick-to-item' + (isSel ? ' sel' : '');
@@ -1344,12 +1360,12 @@ function aiEstimateTOItem(name, btn) {
 // ══════════════════════════════════════════════
 function recipeAvail(r) {
   const ings = r.ings || [];
-  if (!ings.length) return 'ok';
+  if (!ings.length) return { status:'ok', missing:[] };
   const haveNames = new Set(S.ingredients.filter(i=>i.have).map(i=>i.name));
-  const have = ings.filter(i => haveNames.has(i)).length;
-  if (have === ings.length) return 'ok';
-  if (have > 0) return 'part';
-  return 'no';
+  const missing = ings.filter(i => !haveNames.has(i));
+  if (missing.length === 0) return { status:'ok', missing:[] };
+  if (missing.length < ings.length) return { status:'part', missing };
+  return { status:'no', missing };
 }
 
 function renderTagMgmt() {
@@ -1406,9 +1422,16 @@ function renderRecipeList() {
   }
   c.innerHTML = '';
   filtered.forEach(r => {
-    const avail = recipeAvail(r);
+    const {status, missing} = recipeAvail(r);
     const tags = (r.tags||[]).map(t=>`<span class="rtag" style="${tagStyle(t)}">${t}</span>`).join(' ');
     const div = document.createElement('div'); div.className='rc';
+    const availBadge = status==='ok'
+      ? '<span class="avail-ok">✅ 可做</span>'
+      : status==='part'
+        ? `<span class="avail-part">⚠️ 部分</span>`
+        : `<span class="avail-no">❌ 缺料</span>`;
+    const missingHtml = missing.length
+      ? `<div class="rc-missing">缺：${missing.join('、')}</div>` : '';
     div.innerHTML = `
       <div class="rc-hdr">
         <div class="rc-emoji">${r.emoji||'🍽️'}</div>
@@ -1417,8 +1440,9 @@ function renderRecipeList() {
           <div class="rc-meta">
             ${r.kcal?`<span class="rtag" style="background:var(--yl);color:#9a6a00">${r.kcal} kcal</span>`:''}
             ${tags}
-            <span class="${avail==='ok'?'avail-ok':avail==='part'?'avail-part':'avail-no'} " style="margin-left:auto">${avail==='ok'?'✅ 可做':avail==='part'?'⚠️ 部分':'❌ 缺料'}</span>
+            <span style="margin-left:auto">${availBadge}</span>
           </div>
+          ${missingHtml}
           ${r.ings&&r.ings.length ? `<div class="rc-ings">🧺 ${r.ings.join('、')}</div>` : ''}
           ${r.note ? `<div style="font-size:11px;color:var(--mu);margin-top:3px">📝 ${r.note}</div>` : ''}
         </div>
@@ -1437,6 +1461,7 @@ function showRecipeModal(id) {
   document.getElementById('recipeMTitle').textContent = r ? '编辑菜谱' : '添加菜谱';
   document.getElementById('rcName').value  = r?.name  || '';
   document.getElementById('rcEmoji').value = r?.emoji || '';
+  document.getElementById('rcEmoji').dataset.userSet = r ? '1' : '0'; // editing existing = treat as user-set
   document.getElementById('rcKcal').value  = r?.kcal  || '';
   document.getElementById('rcNote').value  = r?.note  || '';
   // Populate ingredient datalist (all ing+fruit names)
@@ -1472,19 +1497,58 @@ function renderRcIngSel(ings) {
   rcIngList.forEach((ing, i) => {
     const sp = document.createElement('span');
     sp.className='chip ch-ing-on';
-    sp.style.marginBottom='4px';
     sp.innerHTML=`${ing} <button class="chip-x" onclick="removeRcIng(${i})">✕</button>`;
     c.appendChild(sp);
   });
 }
 function addRcIng() {
   const el = document.getElementById('rcIngAdd');
-  const v = el.value.trim(); if (!v) return;
-  if (!rcIngList.includes(v)) rcIngList.push(v);
+  const raw = el.value.trim(); if (!raw) return;
+  // Split on Chinese/English commas and spaces, add each non-empty segment
+  raw.split(/[,，\s]+/).map(s=>s.trim()).filter(Boolean).forEach(v => {
+    if (!rcIngList.includes(v)) rcIngList.push(v);
+  });
   el.value='';
   renderRcIngSel(rcIngList);
 }
 function removeRcIng(i) { rcIngList.splice(i,1); renderRcIngSel(rcIngList); }
+
+// ── Emoji auto-suggest ──
+const EMOJI_MAP = [
+  [/鱼|三文鱼|鲈鱼|草鱼|鲫鱼|金枪鱼|鳕鱼|带鱼/,'🐟'],
+  [/虾|基围虾|虾仁/,'🍤'],
+  [/蟹|螃蟹/,'🦀'],
+  [/猪|排骨|猪肉|猪蹄|红烧肉|回锅肉/,'🥩'],
+  [/牛|牛肉|牛排|牛腩/,'🥩'],
+  [/鸡|鸡肉|鸡腿|鸡翅|宫保鸡|白切鸡/,'🍗'],
+  [/蛋|鸡蛋|蛋炒|炒蛋|蒸蛋|荷包蛋/,'🍳'],
+  [/面|拉面|意面|炒面|乌冬|面条/,'🍜'],
+  [/米|炒饭|米饭|饭/,'🍚'],
+  [/包|饺|馒|粉|饼|馄饨/,'🥟'],
+  [/寿司|日料/,'🍱'],
+  [/汤|羹|火锅|炖/,'🍲'],
+  [/沙拉|生菜|蔬菜|凉拌/,'🥗'],
+  [/番茄|西红柿/,'🍅'],
+  [/玉米/,'🌽'],
+  [/蘑菇|菌|木耳/,'🍄'],
+  [/豆腐|豆/,'🫘'],
+  [/披萨|比萨/,'🍕'],
+  [/汉堡/,'🍔'],
+  [/薯条|薯片/,'🍟'],
+  [/粥|稀饭/,'🥣'],
+  [/甜点|蛋糕|饼干|糕点/,'🍰'],
+  [/冰淇淋|冰激凌/,'🍦'],
+  [/奶茶|咖啡|饮料/,'🧋'],
+];
+function autoEmoji(name) {
+  const emojiEl = document.getElementById('rcEmoji');
+  if (emojiEl.dataset.userSet === '1') return; // user manually changed it
+  if (!name.trim()) { emojiEl.value=''; return; }
+  for (const [re, em] of EMOJI_MAP) {
+    if (re.test(name)) { emojiEl.value = em; return; }
+  }
+  emojiEl.value = '🍽️';
+}
 
 function saveRecipe() {
   const name = document.getElementById('rcName').value.trim();
@@ -1524,10 +1588,9 @@ function saveRecipe() {
 }
 
 function deleteRecipe(id) {
-  if (!confirm('确定删除这个菜谱？')) return;
   S.recipes = S.recipes.filter(r=>r.id!==id);
   save(); renderRecipeList();
-  toast('🗑️ 已删除');
+  toast('🗑️ 菜谱已删除');
 }
 
 function aiEstimateRecipe() {
@@ -1543,10 +1606,6 @@ function aiEstimateRecipe() {
 //  INGREDIENT FUNCTIONS
 // ══════════════════════════════════════════════
 function renderIng(q='') {
-  // Populate datalist for food page add-input
-  const dl = document.getElementById('ingDatalist');
-  if (dl) dl.innerHTML = '';  // reset; not needed since it's for new additions only
-
   const c = document.getElementById('ingChips'); if (!c) return;
   c.innerHTML='';
   S.ingredients
@@ -1555,7 +1614,8 @@ function renderIng(q='') {
       const i = S.ingredients.indexOf(ing);
       const sp = document.createElement('span');
       sp.className = 'chip '+(ing.have?'ch-ing-on':'ch-ing-off');
-      sp.innerHTML = `${ing.name} <button class="chip-x" onclick="removeIng(${i});event.stopPropagation()">✕</button>`;
+      const mark = ing.have ? '✓ ' : '✗ ';
+      sp.innerHTML = `${mark}${ing.name} <button class="chip-x" onclick="removeIng(${i});event.stopPropagation()">✕</button>`;
       sp.onclick = () => { ing.have=!ing.have; save(); renderIng(q); renderRecipeList(); };
       c.appendChild(sp);
     });
@@ -1565,25 +1625,38 @@ function renderIng(q='') {
   S.takeouts.forEach((to,i) => {
     const sp = document.createElement('span');
     sp.className='chip ch-to-on';
-    sp.innerHTML=`${to.name} <button class="chip-x" onclick="removeTO(${i});event.stopPropagation()">✕</button>`;
+    const kcalLbl = to.kcal ? ` ${to.kcal}kcal` : '';
+    sp.innerHTML=`${to.name}${kcalLbl} <button class="chip-x" onclick="removeTO(${i});event.stopPropagation()">✕</button>`;
     tc.appendChild(sp);
   });
   renderFruits();
 }
 
 function addIng() {
-  const el=document.getElementById('ingIn'), v=el.value.trim(); if(!v) return;
-  if (S.ingredients.find(i=>i.name===v)) { toast('已有该食材'); return; }
-  S.ingredients.push({name:v, have:true, kcal:0, type:'ing'}); el.value='';
+  const el=document.getElementById('ingIn'), raw=el.value.trim(); if(!raw) return;
+  raw.split(/[,，\s]+/).map(s=>s.trim()).filter(Boolean).forEach(v => {
+    if (!S.ingredients.find(i=>i.name===v))
+      S.ingredients.push({name:v, have:true, kcal:0, type:'ing'});
+  });
+  el.value='';
   save(); renderIng(); renderRecipeList();
 }
 function removeIng(i) { S.ingredients.splice(i,1); save(); renderIng(); renderRecipeList(); }
 function addTO() {
   const el=document.getElementById('toIn'), v=el.value.trim(); if(!v) return;
-  S.takeouts.push({name:v}); el.value='';
+  const kcal = parseInt(document.getElementById('toKcal').value)||0;
+  S.takeouts.push({name:v, kcal}); el.value='';
+  document.getElementById('toKcal').value='';
   save(); renderIng();
 }
 function removeTO(i) { S.takeouts.splice(i,1); save(); renderIng(); }
+function aiEstimateTOLib() {
+  const name = document.getElementById('toIn').value.trim();
+  if (!name) { toast('请先填写外卖名称'); return; }
+  aiEstimateKcal(name, [], kcal => {
+    document.getElementById('toKcal').value = kcal;
+  }, document.getElementById('toLibAiBtn'));
+}
 
 // ── Fruit functions (unified array, type='fruit') ──
 function renderFruits() {
@@ -1596,7 +1669,8 @@ function renderFruits() {
       const sp = document.createElement('span');
       sp.className = 'chip '+(f.have?'ch-fruit-on':'ch-fruit-off');
       const kcalLabel = f.kcal ? ` ${f.kcal}kcal` : '';
-      sp.innerHTML = `${f.name}${kcalLabel} <button class="chip-x" onclick="removeFruit(${i});event.stopPropagation()">✕</button>`;
+      const mark = f.have ? '✓ ' : '✗ ';
+      sp.innerHTML = `${mark}${f.name}${kcalLabel} <button class="chip-x" onclick="removeFruit(${i});event.stopPropagation()">✕</button>`;
       sp.onclick = () => { f.have=!f.have; save(); renderFruits(); };
       c.appendChild(sp);
     });
@@ -1856,13 +1930,25 @@ function renderCalendar() {
       ${kcal>0 ? `<span class="cal-day-kcal ${kcalClass}">${kcal}</span>` : ''}
       ${isToday ? '<span class="cal-day-icon">📍</span>' : ''}`;
 
-    // Tap to jump to that day in plan page
+    // Tap to jump to that day's plan
     if (!isFuture) {
       cell.onclick = () => {
-        showPage('plan');
-        // Set selectedDay to this date
-        selectedDay = new Date(year, month, d);
-        renderDay();
+        // Find offset of this date relative to current week start
+        const ws = getWeekStart();
+        const cellDate = new Date(year, month, d);
+        const diff = Math.round((cellDate - ws) / 86400000);
+        if (diff >= 0 && diff < 7) {
+          // Date is in current week — jump directly
+          currentDayOffset = diff;
+          renderWeekDots();
+          renderDay();
+          // Switch to plan tab
+          const planTab = document.querySelector('.tab[onclick*="plan"]');
+          if (planTab) { planTab.click(); }
+        } else {
+          // Date outside current week — just show a toast
+          toast(`${month+1}月${d}日`);
+        }
       };
     }
     gridEl.appendChild(cell);
