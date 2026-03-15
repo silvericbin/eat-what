@@ -219,6 +219,9 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
 .dd-ex-km{font-size:12px;font-weight:800;color:var(--lb);text-align:right;min-width:52px}
 .dd-ex-min{font-size:12px;font-weight:900;color:var(--tx);text-align:right;min-width:60px}
 .dd-jump-btn{width:100%;margin-top:14px;background:linear-gradient(135deg,var(--ml),var(--ll));color:var(--lb);border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif}
+.dd-gap-row{font-size:12px;font-weight:800;padding:8px 10px;border-radius:10px;margin:8px 0 4px}
+.dd-gap-row.good{background:#d4f4e4;color:#1a6a48}
+.dd-gap-row.warn{background:#ffd4d4;color:#b03030}
 .ex-val{font-weight:900;color:var(--lb)}
 .snk-log-item{display:flex;align-items:center;gap:8px;background:#fff;border-radius:11px;padding:9px 12px;margin-bottom:6px;border:1px solid var(--br);font-size:12px;font-weight:700}
 .ch-snk{background:var(--kl);border-color:#ff88bb;color:var(--kb)}
@@ -503,8 +506,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
     </div>
   </div>
   <div class="card">
-    <span class="clbl">身高（BMI计算用）</span>
+    <span class="clbl">身高（BMI 及 BMR 计算用）</span>
     <input class="inp" type="number" id="heightIn" placeholder="如：165" style="margin-bottom:8px">
+    <span class="clbl">年龄（BMR 计算用）</span>
+    <input class="inp" type="number" id="ageIn" placeholder="如：28" style="margin-bottom:8px">
     <span class="clbl">🚫 饮食禁忌 / 过敏</span>
     <textarea class="inp" id="avoidIn" rows="2" style="resize:none" placeholder="如：不吃辣、海鲜过敏..."></textarea>
     <span class="clbl" style="margin-top:10px">🎯 减重目标</span>
@@ -735,7 +740,7 @@ const DEFAULTS = {
   recipeTags:  ['主食','主菜','蔬菜','汤品','甜点'],
   settings: {
     calories:1400, snackLimit:3, servings:2,
-    height:0, avoidFood:'', weightGoal:'',
+    height:0, avoidFood:'', weightGoal:'', age:0,
     apiKey:'', apiProvider:'siliconflow'
   }
 };
@@ -755,7 +760,7 @@ let rcTagFilter  = '全部'; // recipe list filter
 // ══════════════════════════════════════════════
 //  PERSISTENCE
 // ══════════════════════════════════════════════
-const LS_KEY = 'eatwhat_v23';
+const LS_KEY = 'eatwhat_v24';
 
 function save() {
   // Never sync apiKey to cloud
@@ -1971,16 +1976,27 @@ function ddJumpToPlan(offset) {
   if (t) t.click();
 }
 
+// BMR using Mifflin-St Jeor female formula
+// Returns { bmr, usingDefaults } — defaults used when data incomplete
+function calcBMR() {
+  const height = S.settings.height || 165;
+  const age    = S.settings.age    || 28;
+  const weight = S.weights.length ? S.weights[0].kg : 55;
+  const usingDefaults = !S.settings.height || !S.settings.age || !S.weights.length;
+  // Female: BMR = 10×weight + 6.25×height - 5×age - 161
+  const bmr = Math.round(10*weight + 6.25*height - 5*age - 161);
+  return { bmr, usingDefaults };
+}
+
 function openDayDetail(year, month, day, kcal, goal) {
   const dow = new Date(year, month, day).getDay();
   document.getElementById('ddTitle').textContent =
     `${month+1}月${day}日 · 周${WEEK_DAYS[dow]}`;
 
-  // Jump-to-plan button if date is in current week
-  const ws    = getWeekStart();
-  const diff2 = Math.round((new Date(year, month, day) - ws) / 86400000);
+  // Jump button
+  const ws     = getWeekStart();
+  const diff2  = Math.round((new Date(year, month, day) - ws) / 86400000);
   const inWeek = diff2 >= 0 && diff2 < 7;
-  // Always show jump button; in-week = navigate to that day, else = go to plan tab (today)
   const jumpBtn = `<button class="dd-jump-btn" onclick="ddJumpToPlan(${inWeek ? diff2 : -1})">${inWeek ? '→ 查看当天计划' : '→ 前往计划页'}</button>`;
 
   // No data case
@@ -1996,39 +2012,59 @@ function openDayDetail(year, month, day, kcal, goal) {
     return;
   }
 
-  // Has data — show exercise breakdown
-  const diff   = kcal - goal;
-  const status = kcal <= goal
-    ? `<span style="color:var(--mb)">✅ 还差 ${Math.abs(diff)} kcal</span>`
-    : `<span style="color:var(--pb)">⚠️ 超出 ${diff} kcal</span>`;
+  // BMR & gap
+  const { bmr, usingDefaults } = calcBMR();
+  const gap = kcal - bmr; // positive = excess over BMR, negative = already in deficit
 
-  const walkMin  = Math.round(kcal / 4.5);
-  const walkKm   = (walkMin * 0.1).toFixed(1);
-  const runMin   = Math.round(kcal / 8);
-  const runKm    = (runMin / 6).toFixed(1);
-  const danceMin = Math.round(kcal / 6.5);
-  const plankMin = Math.round(kcal / 5.5);
+  // Status row
+  const gapAbs = Math.abs(gap);
+  const gapRow = gap <= 0
+    ? `<div class="dd-gap-row good">✅ 今日自然缺口 ${gapAbs} kcal，运动是加分项 💪</div>`
+    : `<div class="dd-gap-row warn">⚠️ 超出基础代谢 ${gap} kcal，运动可消耗多余部分</div>`;
 
-  const exRows = [
-    { icon:'🚶', name:'快走',     min:walkMin,  km:walkKm },
-    { icon:'🏃', name:'跑步',     min:runMin,   km:runKm  },
-    { icon:'💃', name:'跳操',     min:danceMin, km:null   },
-    { icon:'🧘', name:'平板支撑', min:plankMin, km:null   },
-  ].map(r => `
-    <div class="dd-ex-row">
-      <span class="dd-ex-name">${r.icon} ${r.name}</span>
-      <span class="dd-ex-km">${r.km ? r.km+' km' : ''}</span>
-      <span class="dd-ex-min">${r.min} 分钟</span>
-    </div>`).join('');
+  const defaultsNote = usingDefaults
+    ? `<div style="font-size:10px;color:var(--mu);margin-top:4px;font-weight:700">* 基于默认数据估算，建议在设置中填写身高、年龄并记录体重</div>`
+    : '';
+
+  // Exercise rows — based on gap (only if gap > 0, else show rest day encouragement)
+  let exSection = '';
+  if (gap > 0) {
+    const walkMin  = Math.round(gap / 4.5);
+    const walkKm   = (walkMin * 0.1).toFixed(1);
+    const runMin   = Math.round(gap / 8);
+    const runKm    = (runMin / 6).toFixed(1);
+    const danceMin = Math.round(gap / 6.5);
+    const plankMin = Math.round(gap / 5.5);
+
+    const rows = [
+      { icon:'🚶', name:'快走',     min:walkMin,  km:walkKm },
+      { icon:'🏃', name:'跑步',     min:runMin,   km:runKm  },
+      { icon:'💃', name:'跳操',     min:danceMin, km:null   },
+      { icon:'🧘', name:'平板支撑', min:plankMin, km:null   },
+    ].map(r => `
+      <div class="dd-ex-row">
+        <span class="dd-ex-name">${r.icon} ${r.name}</span>
+        <span class="dd-ex-km">${r.km ? r.km+' km' : ''}</span>
+        <span class="dd-ex-min">${r.min} 分钟</span>
+      </div>`).join('');
+
+    exSection = `
+      <div style="font-size:11px;font-weight:800;color:var(--mu);margin:10px 0 6px;letter-spacing:.5px">🔥 消耗多余热量需要：</div>
+      ${rows}`;
+  }
 
   document.getElementById('ddContent').innerHTML = `
     <div class="dd-sum">
-      <span class="dd-sum-lbl">📊 今日摄入</span>
+      <span class="dd-sum-lbl">今日摄入</span>
       <span class="dd-sum-val${kcal>goal?' over':''}">${kcal} kcal</span>
     </div>
-    <div style="font-size:12px;font-weight:700;padding:4px 0 10px;color:var(--mu)">${status}</div>
-    <div style="font-size:11px;font-weight:800;color:var(--mu);margin-bottom:6px;letter-spacing:.5px">🔥 消耗这些热量需要：</div>
-    ${exRows}
+    <div class="dd-sum" style="margin-top:2px">
+      <span class="dd-sum-lbl">基础代谢 (BMR)</span>
+      <span style="font-size:15px;font-weight:800;color:var(--mu)">${bmr} kcal</span>
+    </div>
+    ${gapRow}
+    ${defaultsNote}
+    ${exSection}
     ${jumpBtn}`;
 
   showModal('dayDetailModal');
@@ -2043,6 +2079,7 @@ function loadSettingsUI() {
     const el=document.getElementById('sv-'+k); if(el) el.textContent=s[k];
   });
   document.getElementById('heightIn').value  = s.height    ||'';
+  document.getElementById('ageIn').value     = s.age       ||'';
   document.getElementById('avoidIn').value   = s.avoidFood ||'';
   document.getElementById('goalIn').value    = s.weightGoal||'';
   document.getElementById('apiKeyIn').value  = s.apiKey    ||'';
@@ -2071,6 +2108,7 @@ function selProv(el){
 function saveSettings(){
   const s=S.settings;
   s.height     = parseFloat(document.getElementById('heightIn').value)||0;
+  s.age        = parseInt(document.getElementById('ageIn').value)||0;
   s.avoidFood  = document.getElementById('avoidIn').value;
   s.weightGoal = document.getElementById('goalIn').value;
   s.apiKey     = document.getElementById('apiKeyIn').value.trim();
