@@ -542,7 +542,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
   <!-- Cloud sync -->
   <div class="card" style="margin-top:10px">
     <span class="clbl">☁️ 云同步设置</span>
-    <p class="note" style="margin-bottom:10px">连接自己的 Supabase 数据库，与家人实时同步。每人填自己的数据库，数据完全独立。</p>
+    <p class="note" style="margin-bottom:10px">填写同一个 Supabase 数据库的 URL 和 Key，即可与家人实时同步数据。需在 Supabase 控制台开启 Realtime → <strong>app_settings</strong> 表的 Replication。</p>
     <span class="clbl">Project URL</span>
     <input class="inp" id="sbUrlIn" placeholder="https://xxxxxx.supabase.co" style="margin-bottom:8px;font-size:12px">
     <span class="clbl">Publishable Key</span>
@@ -551,6 +551,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
       <button class="gbtn g-green" style="flex:1;font-size:12px;padding:10px" onclick="saveCloudSettings()">🔗 连接数据库</button>
       <button class="gbtn" style="flex:1;font-size:12px;padding:10px;background:linear-gradient(135deg,#d0d0d8,#b0b0b8)" onclick="disconnectCloud()">⛔ 断开同步</button>
     </div>
+    <button class="gbtn g-blue" style="width:100%;font-size:12px;padding:10px;margin-top:7px" onclick="manualSync()">🔄 立即同步</button>
     <div id="cloudStatus" style="margin-top:8px;font-size:11px;font-weight:700;color:var(--mu)"></div>
   </div>
   <!-- Data backup -->
@@ -882,6 +883,7 @@ async function initCloud() {
     setSyncDot('syncing');
     await pullFromCloud();
     subscribeRealtime();
+    startPolling();
     setSyncDot('synced');
     updateCloudStatus();
   } catch(e) {
@@ -900,10 +902,8 @@ async function pullFromCloud() {
       const v = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
       if (row.key==='recipes')     S.recipes     = v;
       if (row.key==='ingredients') {
-        // Ensure all items have type+kcal (backwards compat)
         S.ingredients = v.map(i=>({name:i.name,have:!!i.have,kcal:i.kcal||0,type:i.type||'ing'}));
       }
-      // Old cloud fruits key — migrate into ingredients
       if (row.key==='fruits' && Array.isArray(v)) {
         v.forEach(f => {
           if (!S.ingredients.find(i=>i.name===f.name))
@@ -922,10 +922,15 @@ async function pullFromCloud() {
         if (c.settings) S.settings = Object.assign(S.settings, c.settings);
       }
     });
-    S.settings.apiKey = apiKey; // restore local-only key
+    S.settings.apiKey = apiKey;
     localStorage.setItem(LS_KEY, JSON.stringify(S));
     renderAll();
-  } catch(e) { console.warn('Pull error', e); }
+    setSyncDot('synced');
+  } catch(e) {
+    console.warn('Pull error', e);
+    setSyncDot('offline');
+    toast('☁️ 同步拉取失败，请检查网络或数据库连接');
+  }
 }
 
 async function pushToCloud(immediate) {
@@ -959,6 +964,7 @@ async function pushToCloud(immediate) {
   } catch(e) {
     console.warn('Push error', e);
     setSyncDot('offline');
+    toast('☁️ 同步上传失败，请检查网络或数据库连接');
   } finally {
     _pushing = false;
     if (_pendingPush) { _pendingPush = false; pushToCloud(true); }
@@ -966,6 +972,8 @@ async function pushToCloud(immediate) {
 }
 
 let _realtimeSub = null;
+let _pollTimer = null;
+
 function subscribeRealtime() {
   if (_realtimeSub) { try { _realtimeSub.unsubscribe(); } catch{} }
   _realtimeSub = sb.channel('app_settings_changes')
@@ -974,6 +982,28 @@ function subscribeRealtime() {
       subscribeRealtime._t = setTimeout(pullFromCloud, 2000);
     })
     .subscribe();
+}
+
+// Fallback polling every 30s in case Realtime is not enabled on the database
+function startPolling() {
+  stopPolling();
+  _pollTimer = setInterval(() => { if (sb) pullFromCloud(); }, 30000);
+}
+function stopPolling() {
+  if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
+}
+
+// Pull on tab/app becoming visible (covers switching back from another app)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && sb) pullFromCloud();
+});
+
+async function manualSync() {
+  if (!sb) { toast('未连接数据库，请先配置云同步'); return; }
+  setSyncDot('syncing');
+  await pushToCloud(true);
+  await pullFromCloud();
+  toast('🔄 同步完成');
 }
 
 async function saveCloudSettings() {
@@ -989,7 +1019,7 @@ async function saveCloudSettings() {
 function disconnectCloud() {
   if (!confirm('断开后数据仅存本设备，确定吗？')) return;
   localStorage.removeItem('eatwhat_cloud');
-  sb = null; setSyncDot('offline');
+  sb = null; setSyncDot('offline'); stopPolling();
   document.getElementById('sbUrlIn').value = '';
   document.getElementById('sbKeyIn').value = '';
   updateCloudStatus(); toast('⛔ 已断开云同步');
