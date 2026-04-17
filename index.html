@@ -90,7 +90,7 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
 .ing-tags-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0}
 .ing-tag{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;border:1.5px solid transparent;transition:all .2s;font-family:'Nunito',sans-serif}
 .ing-tag.have{background:var(--gl);border-color:var(--gd);color:#1a6a48}
-.ing-tag.lack{background:#f0f0f5;border-color:#d8d8e8;color:#a0a0b8;text-decoration:line-through}
+.ing-tag.lack{background:#ffd4d4;border-color:#ffb0b0;color:#b03030;text-decoration:line-through}
 .ing-tag:active{transform:scale(.92)}
 
 /* ── TODAY PAGE ── */
@@ -543,13 +543,20 @@ async function pushToCloud(immediate) {
 
 let _realtimeSub = null;
 function subscribeRealtime() {
-  if (_realtimeSub) { try { _realtimeSub.unsubscribe(); } catch{} }
+  clearTimeout(subscribeRealtime._retry);
+  if (_realtimeSub) { try { _realtimeSub.unsubscribe(); } catch{} _realtimeSub = null; }
+  if (!sb) return;
   _realtimeSub = sb.channel('app_data_changes')
     .on('postgres_changes', {event:'*', schema:'public', table:'app_data'}, () => {
       clearTimeout(subscribeRealtime._t);
       subscribeRealtime._t = setTimeout(pullFromCloud, 2000);
     })
-    .subscribe();
+    .subscribe(status => {
+      if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        setSyncState('offline');
+        subscribeRealtime._retry = setTimeout(() => { if (sb) subscribeRealtime(); }, 8000);
+      }
+    });
 }
 
 function startPolling() {
@@ -561,7 +568,7 @@ function stopPolling() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && sb) pullFromCloud();
+  if (!document.hidden && sb) { pullFromCloud(); subscribeRealtime(); }
 });
 
 async function manualSync() {
@@ -938,7 +945,7 @@ function renderIngList() {
     c.innerHTML = '<div style="text-align:center;padding:14px;color:var(--mu);font-size:12px;font-weight:700">还没有食材，添加一些吧！</div>';
     return;
   }
-  const sorted = [...S.ingredients].sort((a,b) => (b.have?1:0)-(a.have?1:0));
+  const sorted = [...S.ingredients].sort((a,b) => (a.have?1:0)-(b.have?1:0));
   c.innerHTML = '';
 
   if (_ingView === 'tag') {
@@ -960,6 +967,7 @@ function renderIngList() {
       const nameSpan = document.createElement('span');
       nameSpan.className = 'ing-item-name';
       nameSpan.textContent = ing.name;
+      if (!ing.have) { nameSpan.style.cssText = 'color:#b03030;text-decoration:line-through'; }
 
       const togBtn = document.createElement('button');
       togBtn.className = `ing-tog ${ing.have ? 'have' : 'lack'}`;
