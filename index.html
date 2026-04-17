@@ -205,7 +205,7 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
 <!-- ══ FRIDGE PAGE ══ -->
 <div id="page-fridge" class="page">
   <div class="card">
-    <span class="clbl">食材库存</span>
+    <span class="clbl">食材库（与菜谱联动）</span>
     <div id="ingList"></div>
     <div class="divl"></div>
     <div class="add-row">
@@ -248,7 +248,7 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
     <span class="lbl">所需食材</span>
     <div class="chips" id="rcIngChips" style="margin-bottom:6px"></div>
     <div class="add-row" style="margin-bottom:10px">
-      <input class="inp" id="rcIngInput" placeholder="输入食材名称" list="rcIngDatalist">
+      <input class="inp" id="rcIngInput" placeholder="多个食材用逗号或空格分隔" list="rcIngDatalist" onkeydown="if(event.key==='Enter'){addRcIng();event.preventDefault()}">
       <button class="add-btn-s" onclick="addRcIng()">添加</button>
     </div>
     <datalist id="rcIngDatalist"></datalist>
@@ -732,12 +732,20 @@ function buildRecipeCard(r) {
   div.id = 'rc-'+r.id;
 
   let ingsHtml = '';
+  let canMakeHtml = '';
   if (r.ingredients && r.ingredients.length) {
+    const missing = [];
     ingsHtml = r.ingredients.map(name => {
       const fi = S.ingredients.find(i => i.name===name);
-      if (!fi) return `<span style="color:var(--mu)">${name}</span>`;
-      return fi.have ? `<span class="ing-ok">✓${name}</span>` : `<span class="ing-miss">✗${name}</span>`;
+      if (!fi) { missing.push(name); return `<span style="color:var(--mu)">${name}</span>`; }
+      if (!fi.have) { missing.push(name); return `<span class="ing-miss"><s>${name}</s></span>`; }
+      return `<span class="ing-ok">✓${name}</span>`;
     }).join(' · ');
+    if (missing.length === 0) {
+      canMakeHtml = `<div style="font-size:11px;font-weight:800;color:var(--gr);margin:-2px 0 6px">✅ 食材齐全，可以做！</div>`;
+    } else {
+      canMakeHtml = `<div style="font-size:11px;font-weight:800;color:var(--re);margin:-2px 0 6px">⚠️ 缺少：${missing.join('、')}</div>`;
+    }
   }
 
   const tagsHtml = (r.tags||[]).map(t =>
@@ -753,6 +761,7 @@ function buildRecipeCard(r) {
         <div class="rc-tags">${tagsHtml}</div>
       </div>
     </div>
+    ${canMakeHtml}
     ${ingsHtml ? `<div class="rc-ings">${ingsHtml}</div>` : ''}
     <div class="rc-btns">
       <button class="rbtn" onclick="openRecipeModal('${r.id}')">✏️ 编辑</button>
@@ -841,10 +850,14 @@ function renderRcIngChips() {
 function addRcIng() {
   const inp = document.getElementById('rcIngInput');
   const val = inp.value.trim();
-  if (!val || _rcIngList.includes(val)) { inp.value=''; return; }
-  _rcIngList.push(val);
+  if (!val) return;
+  const parts = val.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean);
+  let added = false;
+  parts.forEach(name => {
+    if (name && !_rcIngList.includes(name)) { _rcIngList.push(name); added = true; }
+  });
   inp.value = '';
-  renderRcIngChips();
+  if (added) renderRcIngChips();
 }
 
 function removeRcIng(i) {
@@ -867,10 +880,20 @@ function saveRecipe() {
   } else {
     S.recipes.unshift({id:uid(), name, emoji:emoji||autoEmojiFor(name), kcal, tags, ingredients:_rcIngList, note});
   }
+  // 自动同步食材到食材库（新食材默认缺货）
+  let newIngCount = 0;
+  _rcIngList.forEach(ingName => {
+    if (!S.ingredients.find(i => i.name === ingName)) {
+      S.ingredients.push({name: ingName, have: false});
+      newIngCount++;
+    }
+  });
   save();
   hideModal('recipeModal');
   renderRecipeList();
-  toast(_rcEditId ? '✅ 菜谱已更新' : '✅ 菜谱已添加');
+  renderIngList();
+  const msg = _rcEditId ? '✅ 菜谱已更新' : '✅ 菜谱已添加';
+  toast(newIngCount > 0 ? `${msg}，${newIngCount}种食材已加入食材库` : msg);
 }
 
 function autoEmojiFor(name) {
