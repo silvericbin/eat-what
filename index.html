@@ -83,6 +83,15 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
 .ing-tog.lack{background:#ffd4d4;color:#b03030}
 .ing-item-del{background:none;border:none;color:#d8d8e8;cursor:pointer;font-size:14px;padding:4px 6px;border-radius:6px;flex-shrink:0}
 .ing-item-del:active{color:var(--re)}
+/* ── INGREDIENT TAG MODE ── */
+.ing-view-toggle{display:flex;gap:4px}
+.ing-view-btn{background:var(--bg);border:1.5px solid var(--br);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;color:var(--mu);transition:all .15s}
+.ing-view-btn.active{background:var(--pl);border-color:var(--pd);color:#4a38a0}
+.ing-tags-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0}
+.ing-tag{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;border:1.5px solid transparent;transition:all .2s;font-family:'Nunito',sans-serif}
+.ing-tag.have{background:var(--gl);border-color:var(--gd);color:#1a6a48}
+.ing-tag.lack{background:#f0f0f5;border-color:#d8d8e8;color:#a0a0b8;text-decoration:line-through}
+.ing-tag:active{transform:scale(.92)}
 
 /* ── TODAY PAGE ── */
 .today-summary{background:linear-gradient(135deg,var(--gl),var(--pl));border-radius:var(--r);padding:14px;margin-bottom:10px}
@@ -205,7 +214,13 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
 <!-- ══ FRIDGE PAGE ══ -->
 <div id="page-fridge" class="page">
   <div class="card">
-    <span class="clbl">食材库（与菜谱联动）</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span class="clbl" style="margin-bottom:0">食材库（与菜谱联动）</span>
+      <div class="ing-view-toggle">
+        <button class="ing-view-btn active" id="ingViewList" onclick="setIngView('list')">≡ 列表</button>
+        <button class="ing-view-btn" id="ingViewTag" onclick="setIngView('tag')"># 标签</button>
+      </div>
+    </div>
     <div id="ingList"></div>
     <div class="divl"></div>
     <div class="add-row">
@@ -399,6 +414,7 @@ let _pickTagFilter= '全部';
 let _rcEditId     = null;
 let _rcIngList    = [];
 let _rcTagFilter  = '全部';
+let _ingView      = 'list'; // 'list' | 'tag'
 
 // ══════════════════════════════════════════════
 //  PERSISTENCE
@@ -909,36 +925,58 @@ function autoEmoji(name) {
 // ══════════════════════════════════════════════
 //  INGREDIENTS PAGE
 // ══════════════════════════════════════════════
+function setIngView(mode) {
+  _ingView = mode;
+  document.getElementById('ingViewList').classList.toggle('active', mode === 'list');
+  document.getElementById('ingViewTag').classList.toggle('active',  mode === 'tag');
+  renderIngList();
+}
+
 function renderIngList() {
   const c = document.getElementById('ingList'); if (!c) return;
   if (!S.ingredients.length) {
     c.innerHTML = '<div style="text-align:center;padding:14px;color:var(--mu);font-size:12px;font-weight:700">还没有食材，添加一些吧！</div>';
     return;
   }
+  const sorted = [...S.ingredients].sort((a,b) => (b.have?1:0)-(a.have?1:0));
   c.innerHTML = '';
-  [...S.ingredients].sort((a,b) => (b.have?1:0)-(a.have?1:0)).forEach(ing => {
-    const div = document.createElement('div');
-    div.className = 'ing-item';
 
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'ing-item-name';
-    nameSpan.textContent = ing.name;
+  if (_ingView === 'tag') {
+    const wrap = document.createElement('div');
+    wrap.className = 'ing-tags-wrap';
+    sorted.forEach(ing => {
+      const btn = document.createElement('button');
+      btn.className = `ing-tag ${ing.have ? 'have' : 'lack'}`;
+      btn.textContent = (ing.have ? '✓ ' : '✗ ') + ing.name;
+      btn.onclick = () => toggleIng(ing.name);
+      wrap.appendChild(btn);
+    });
+    c.appendChild(wrap);
+  } else {
+    sorted.forEach(ing => {
+      const div = document.createElement('div');
+      div.className = 'ing-item';
 
-    const togBtn = document.createElement('button');
-    togBtn.className = `ing-tog ${ing.have ? 'have' : 'lack'}`;
-    togBtn.textContent = ing.have ? '✓ 有货' : '✗ 缺货';
-    togBtn.onclick = () => toggleIng(ing.name);
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'ing-item-name';
+      nameSpan.textContent = ing.name;
 
-    const delBtn = document.createElement('button');
-    delBtn.className = 'ing-item-del';
-    delBtn.textContent = '✕';
-    delBtn.onclick = () => deleteIng(ing.name);
+      const togBtn = document.createElement('button');
+      togBtn.className = `ing-tog ${ing.have ? 'have' : 'lack'}`;
+      togBtn.textContent = ing.have ? '✓ 有货' : '✗ 缺货';
+      togBtn.onclick = () => toggleIng(ing.name);
 
-    div.appendChild(nameSpan);
-    div.appendChild(togBtn);
-    div.appendChild(delBtn);
-    c.appendChild(div);
-  });
+      const delBtn = document.createElement('button');
+      delBtn.className = 'ing-item-del';
+      delBtn.textContent = '✕';
+      delBtn.onclick = () => deleteIng(ing.name);
+
+      div.appendChild(nameSpan);
+      div.appendChild(togBtn);
+      div.appendChild(delBtn);
+      c.appendChild(div);
+    });
+  }
 }
 
 function addIng() {
