@@ -907,7 +907,7 @@ function saveRecipe() {
   let newIngCount = 0;
   _rcIngList.forEach(ingName => {
     if (!S.ingredients.find(i => i.name === ingName)) {
-      S.ingredients.push({name: ingName, have: false});
+      S.ingredients.push({name: ingName, have: true});
       newIngCount++;
     }
   });
