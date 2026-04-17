@@ -149,6 +149,14 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
 .topt{padding:5px 10px;border-radius:20px;border:1.5px solid var(--br);font-size:11px;font-weight:700;cursor:pointer;background:#fff;color:var(--mu);font-family:'Nunito',sans-serif;transition:all .15s}
 .topt.sel{background:var(--gl);border-color:var(--gd);color:#1a6a48}
 
+/* ── ING SUGGESTIONS ── */
+.ing-suggest-row{margin-bottom:8px}
+.ing-suggest-lbl{font-size:10px;font-weight:800;color:var(--mu);margin-bottom:5px}
+.ing-suggest-chips{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding:1px 0}
+.ing-suggest-chips::-webkit-scrollbar{display:none}
+.ing-sug-chip{flex-shrink:0;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#fff8e8;border:1.5px solid #f0c878;color:#8a6010;cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s}
+.ing-sug-chip:active{transform:scale(.92);background:#ffe8b0}
+
 /* ── CHIPS ── */
 .chips{display:flex;flex-wrap:wrap;gap:6px;min-height:8px}
 .chip{display:flex;align-items:center;gap:4px;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;background:var(--gl);border:1.5px solid var(--gd);color:#1a6a48}
@@ -262,11 +270,14 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
     <div class="tag-sel" id="rcTagSel" style="margin-bottom:8px"></div>
     <span class="lbl">所需食材</span>
     <div class="chips" id="rcIngChips" style="margin-bottom:6px"></div>
+    <div class="ing-suggest-row" id="rcIngSuggestRow" style="display:none">
+      <div class="ing-suggest-lbl">已有相似</div>
+      <div class="ing-suggest-chips" id="rcIngSuggestChips"></div>
+    </div>
     <div class="add-row" style="margin-bottom:10px">
-      <input class="inp" id="rcIngInput" placeholder="多个食材用逗号或空格分隔" list="rcIngDatalist" onkeydown="if(event.key==='Enter'){addRcIng();event.preventDefault()}">
+      <input class="inp" id="rcIngInput" placeholder="多个食材用逗号或空格分隔" onkeydown="if(event.key==='Enter'){addRcIng();event.preventDefault()}" oninput="updateIngSuggestions()">
       <button class="add-btn-s" onclick="addRcIng()">添加</button>
     </div>
-    <datalist id="rcIngDatalist"></datalist>
     <span class="lbl">备注（可选）</span>
     <textarea class="inp" id="rcNote" rows="2" style="resize:none;margin-bottom:14px" placeholder="做法要点、口味备注..."></textarea>
     <button class="gbtn g-green" onclick="saveRecipe()">💾 保存菜谱</button>
@@ -849,11 +860,8 @@ function openRecipeModal(id) {
   });
 
   renderRcIngChips();
-
-  const dl = document.getElementById('rcIngDatalist'); dl.innerHTML='';
-  S.ingredients.forEach(i => {
-    const opt = document.createElement('option'); opt.value = i.name; dl.appendChild(opt);
-  });
+  document.getElementById('rcIngSuggestRow').style.display = 'none';
+  document.getElementById('rcIngInput').value = '';
 
   showModal('recipeModal');
   setTimeout(() => document.getElementById('rcName').focus(), 350);
@@ -870,6 +878,55 @@ function renderRcIngChips() {
   });
 }
 
+function updateIngSuggestions() {
+  const inp    = document.getElementById('rcIngInput');
+  const row    = document.getElementById('rcIngSuggestRow');
+  const chips  = document.getElementById('rcIngSuggestChips');
+  const val    = inp.value;
+
+  // 末尾是分隔符或为空 → 隐藏
+  if (!val.trim() || /[,，\s]$/.test(val)) { row.style.display = 'none'; return; }
+
+  const parts = val.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean);
+  const query = parts[parts.length - 1];
+  const completedParts = parts.slice(0, -1);
+  if (!query) { row.style.display = 'none'; return; }
+
+  const suggestions = S.ingredients.filter(ing => {
+    const n = ing.name;
+    if (!(n.includes(query) || query.includes(n))) return false; // 双向匹配
+    if (_rcIngList.includes(n)) return false;                    // 第一层：已是chip
+    if (completedParts.includes(n)) return false;               // 第二层：已在输入框完成段
+    if (n === query) return false;                               // 第三层：完全一致
+    return true;
+  });
+
+  if (!suggestions.length) { row.style.display = 'none'; return; }
+
+  chips.innerHTML = '';
+  suggestions.forEach(ing => {
+    const btn = document.createElement('button');
+    btn.className = 'ing-sug-chip';
+    btn.textContent = ing.name;
+    btn.onclick = () => selectIngSuggestion(ing.name);
+    chips.appendChild(btn);
+  });
+  row.style.display = '';
+}
+
+function selectIngSuggestion(name) {
+  const inp  = document.getElementById('rcIngInput');
+  const parts = inp.value.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean);
+  parts.pop(); // 移除当前未完成的 query
+
+  if (!_rcIngList.includes(name)) { _rcIngList.push(name); renderRcIngChips(); }
+
+  // 保留已完成的词段在输入框，方便继续输入
+  inp.value = parts.length ? parts.join(' ') + ' ' : '';
+  updateIngSuggestions();
+  inp.focus();
+}
+
 function addRcIng() {
   const inp = document.getElementById('rcIngInput');
   const val = inp.value.trim();
@@ -880,6 +937,7 @@ function addRcIng() {
     if (name && !_rcIngList.includes(name)) { _rcIngList.push(name); added = true; }
   });
   inp.value = '';
+  document.getElementById('rcIngSuggestRow').style.display = 'none';
   if (added) renderRcIngChips();
 }
 
