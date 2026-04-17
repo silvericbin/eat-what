@@ -3,277 +3,166 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>🥗 今天吃什么</title>
+<title>🥗 吃什么</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
-button,input,textarea,select,[onclick]{touch-action:manipulation}
 :root{
-  --mb:#3dbf87; --md:#6dd5a8; --ml:#b8f0d8;
-  --lb:#7b6ee8; --ld:#b89ee8; --ll:#e0d4f7;
-  --yb:#e8c030; --yl:#fff3b0;
-  --pb:#e87050; --pl:#ffd6c0;
-  --kb:#d040a0; --kl:#ffd6e8;
-  --bg:#f7f9fb; --card:#fff;
-  --tx:#3a3a4a; --mu:#9a9ab0; --br:#ebebf5;
+  --gr:#3dbf87;--gd:#6dd5a8;--gl:#b8f0d8;
+  --pu:#7b6ee8;--pd:#b89ee8;--pl:#e0d4f7;
+  --re:#e87050;
+  --bg:#f7f9fb;--card:#fff;
+  --tx:#3a3a4a;--mu:#9a9ab0;--br:#ebebf5;
   --sh:0 2px 14px rgba(100,100,160,.09);
-  --r:18px; --rs:12px;
+  --r:18px;--rs:12px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;max-width:430px;margin:0 auto;overflow-x:hidden}
+button,input,textarea,select,[onclick]{touch-action:manipulation}
 
 /* ── HEADER ── */
-.hdr{background:linear-gradient(135deg,#b8f0d8 0%,#d4eaff 55%,#e8d4f7 100%);padding:16px 14px 11px;position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(255,255,255,.6);backdrop-filter:blur(10px)}
+.hdr{background:linear-gradient(135deg,#b8f0d8,#d4eaff 55%,#e8d4f7);padding:14px 14px 10px;position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(255,255,255,.6);backdrop-filter:blur(10px)}
 .hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.logo{font-size:19px;font-weight:900;background:linear-gradient(135deg,#3dbf87,#7b6ee8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.logo-sub{font-size:10px;color:var(--lb);font-weight:700}
-.streak{background:linear-gradient(135deg,#ff9a44,#fc6076);color:#fff;border-radius:10px;padding:4px 10px;font-size:11px;font-weight:800;box-shadow:0 3px 10px rgba(252,96,118,.3)}
-.sync-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:6px;vertical-align:middle;transition:background .4s}
-.sync-dot.synced{background:#3dbf87}
-.sync-dot.syncing{background:#f0b429;animation:pulse .8s infinite}
-.sync-dot.offline{background:#d0d0d0}
+.logo{font-size:18px;font-weight:900;background:linear-gradient(135deg,#3dbf87,#7b6ee8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-sub{font-size:10px;color:var(--pu);font-weight:700}
+.gear-btn{background:rgba(255,255,255,.6);border:none;border-radius:10px;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative}
+.gear-btn::after{content:'';width:8px;height:8px;border-radius:50%;position:absolute;top:3px;right:3px;background:#d0d0d0;transition:background .4s;border:1.5px solid rgba(255,255,255,.8)}
+.gear-btn[data-sync="synced"]::after{background:#3dbf87}
+.gear-btn[data-sync="syncing"]::after{background:#f0b429;animation:pulse .8s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .tabs{display:flex;gap:3px;background:rgba(255,255,255,.5);border-radius:12px;padding:3px}
-.tab{flex:1;border:none;background:transparent;border-radius:9px;padding:5px 2px;font-size:10px;font-weight:800;color:var(--mu);cursor:pointer;transition:all .2s;font-family:'Nunito',sans-serif;white-space:nowrap}
+.tab{flex:1;border:none;background:transparent;border-radius:9px;padding:6px 2px;font-size:11px;font-weight:800;color:var(--mu);cursor:pointer;transition:all .2s;font-family:'Nunito',sans-serif;white-space:nowrap}
 .tab.active{background:#fff;color:var(--tx);box-shadow:0 2px 8px rgba(100,100,160,.12)}
 
 /* ── PAGES ── */
-.page{display:none;padding:13px 13px 30px;animation:fi .2s ease}
+.page{display:none;padding:13px 13px 80px;animation:fi .2s ease}
 .page.active{display:block}
 @keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 
-/* ── CARD ── */
+/* ── CARDS ── */
 .card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:13px;margin-bottom:10px;border:1px solid var(--br)}
 .clbl{font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:block}
-.sec{font-size:15px;font-weight:900;margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .divl{height:1px;background:var(--br);margin:12px 0}
 
-/* ── PLAN PAGE ── */
-.wdots{display:flex;flex-direction:column;align-items:stretch;margin-bottom:11px}
-.wdot{width:25px;height:25px;border-radius:7px;background:#fff;border:1px solid var(--br);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;cursor:pointer;transition:all .15s;color:var(--mu)}
-.wdot.cur{background:var(--mb);border-color:var(--mb);color:#fff;box-shadow:0 2px 8px rgba(61,191,135,.4)}
-.wdot.has{background:var(--ml);border-color:var(--md);color:#1a6a48}
-.day-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.nbtn{background:#fff;border:1px solid var(--br);border-radius:9px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;box-shadow:var(--sh);transition:transform .1s}
-.nbtn:active{transform:scale(.9)}
-.dname{font-size:17px;font-weight:900;text-align:center}
-.ddate{font-size:11px;color:var(--mu);font-weight:600;text-align:center}
-.dsum{background:linear-gradient(135deg,var(--ml) 0%,var(--ll) 100%);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.dsum-kcal{font-size:20px;font-weight:900;color:#2d7a5a}
-.dsum-lbl{font-size:10px;font-weight:800;color:var(--tx);opacity:.6}
-.pbar{height:6px;background:rgba(255,255,255,.5);border-radius:3px;margin-top:5px;width:140px}
-.pfill{height:100%;border-radius:3px;background:var(--mb);transition:width .5s}
+/* ── TAG BAR ── */
+.tag-bar{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
+.tag-bar::-webkit-scrollbar{display:none}
+.tbar-tag{flex-shrink:0;padding:5px 12px;border-radius:20px;border:1.5px solid var(--br);font-size:11px;font-weight:800;cursor:pointer;background:#fff;color:var(--mu);font-family:'Nunito',sans-serif;transition:all .15s}
+.tbar-tag.active{background:var(--pl);border-color:var(--pd);color:#4a38a0}
 
-/* ── MEAL CARDS ── */
-.mc{background:#fff;border-radius:var(--r);box-shadow:var(--sh);margin-bottom:10px;border:1px solid var(--br);overflow:hidden}
-.mc-hdr{display:flex;align-items:center;gap:6px;padding:11px 13px 7px;border-bottom:1px solid var(--br)}
-.mc-badge{font-size:12px;font-weight:900;padding:3px 10px;border-radius:20px}
-.b-br{background:var(--yl);color:#9a6a00}
-.b-ln{background:var(--ml);color:#1a7a48}
-.b-dn{background:var(--ll);color:#4a38a0}
-.mc-kcal{font-size:11px;color:var(--mu);font-weight:700}
-.mc-del{margin-left:auto;background:none;border:none;font-size:13px;color:#d8d8e8;cursor:pointer;padding:3px 5px;border-radius:6px;transition:all .15s;font-family:'Nunito',sans-serif}
-.mc-del:active{background:#fee2e2;color:#e05050}
-.mc-dish{display:flex;align-items:center;gap:12px;padding:10px 13px;border-bottom:1px solid var(--br)}
-.mc-dish:last-child{border-bottom:none}
-.mc-dish-emoji{font-size:26px;line-height:1;flex-shrink:0}
-.mc-dish-main{flex:1;min-width:0}
-.mc-dish-name{font-size:15px;font-weight:800;color:var(--tx);line-height:1.25}
-.mc-dish-meta{font-size:10px;color:var(--mu);font-weight:700;margin-top:2px}
-.mc-dish-del{background:none;border:none;color:#d8d8e8;cursor:pointer;font-size:15px;padding:4px;border-radius:6px;transition:all .15s;font-family:'Nunito',sans-serif;flex-shrink:0}
-.mc-dish-del:active{background:#fee2e2;color:#e05050}
-.mc-empty{padding:14px 13px;display:flex;align-items:center;gap:8px;color:var(--mu);font-size:12px;font-weight:700}
-.mc-foot{padding:8px 13px 11px;display:flex;align-items:center;gap:8px}
-.mc-add-btn{flex:1;background:none;border:1.5px dashed var(--br);border-radius:10px;padding:7px;font-size:12px;font-weight:800;color:var(--mu);cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s;text-align:center}
-.mc-add-btn:active{border-color:var(--md);color:var(--mb);background:#f0fff8}
-.btn-eat{background:none;border:1.5px solid var(--br);border-radius:8px;padding:5px 11px;font-size:12px;cursor:pointer;font-family:'Nunito',sans-serif;color:var(--mu);transition:all .15s;white-space:nowrap;font-weight:800}
-.btn-eat:active{transform:scale(.94)}
-.btn-eat.done{border-color:var(--md);color:var(--mb);background:var(--ml)}
-
-/* ── PICK DISH MODAL ── */
-.pick-tag-bar{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;margin-bottom:4px;scrollbar-width:none}
-.pick-tag-bar::-webkit-scrollbar{display:none}
-.ptag{flex-shrink:0;padding:5px 12px;border-radius:20px;border:1.5px solid var(--br);font-size:11px;font-weight:800;cursor:pointer;background:#fff;color:var(--mu);font-family:'Nunito',sans-serif;transition:all .15s}
-.ptag.active{background:var(--ll);border-color:var(--ld);color:#4a38a0}
-.pick-recipe{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--br);border-radius:var(--rs);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s}
-.pick-recipe.sel{border-color:var(--md);background:linear-gradient(135deg,#f0fff8,#f8f0ff)}
-.pick-recipe-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--br);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:11px}
-.pick-recipe.sel .pick-recipe-check{background:var(--mb);border-color:var(--mb);color:#fff}
-.pick-recipe-emoji{font-size:22px;flex-shrink:0}
-.pick-recipe-info{flex:1;min-width:0}
-.pick-recipe-name{font-size:13px;font-weight:800;margin-bottom:2px}
-.pick-recipe-meta{font-size:10px;color:var(--mu);font-weight:700;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
-.avail-ok{background:#d4f4e4;color:#1a6a48;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px}
-.avail-part{background:var(--yl);color:#9a6a00;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px}
-.avail-no{background:#ffd4d4;color:#b03030;font-size:10px;font-weight:800;padding:2px 6px;border-radius:20px}
-.pick-sticky{position:sticky;bottom:0;background:var(--bg);padding:10px 0 0;margin-top:8px}
-/* custom dish in picker */
-.custom-dish-area{border:1.5px dashed var(--br);border-radius:var(--rs);padding:10px;margin-top:8px}
-/* takeout item in picker */
-.pick-to-item{display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--br);border-radius:var(--rs);padding:9px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s}
-.pick-to-item.sel{border-color:var(--pb);background:linear-gradient(135deg,#fff8f0,#fff0ee)}
-.pick-to-item .pick-recipe-check{border-color:var(--br)}
-.pick-to-item.sel .pick-recipe-check{background:var(--pb);border-color:var(--pb);color:#fff}
-.to-kcal-row{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid var(--br)}
-
-/* ── GENERATE BUTTONS ── */
-.gbtn{border:none;border-radius:var(--r);padding:13px;font-size:14px;font-weight:900;color:#fff;cursor:pointer;font-family:'Nunito',sans-serif;transition:transform .15s;width:100%;box-shadow:0 4px 18px rgba(61,191,135,.3)}
-.gbtn:active{transform:scale(.97)}
-.gbtn:disabled{opacity:.6;cursor:not-allowed}
-.g-green{background:linear-gradient(135deg,#3dbf87,#7b6ee8)}
-.g-purple{background:linear-gradient(135deg,#7b6ee8,#e870a0);box-shadow:0 4px 18px rgba(123,110,232,.3)}
-.g-pink{background:linear-gradient(135deg,#ff88bb,#c03070);box-shadow:0 4px 18px rgba(192,48,112,.25)}
-.g-blue{background:linear-gradient(135deg,#4090f0,#7b6ee8);box-shadow:0 4px 18px rgba(64,144,240,.3)}
-.g-orange{background:linear-gradient(135deg,#ff9a44,#fc6076);box-shadow:0 4px 18px rgba(255,154,68,.3)}
-
-/* ── DATA PAGE ── */
-.bmi-card{background:linear-gradient(135deg,var(--ml),var(--ll));border-radius:var(--r);padding:14px;margin-bottom:10px}
-.bmi-num{font-size:38px;font-weight:900;line-height:1}
-.bmi-cls{font-size:13px;font-weight:800;padding:3px 10px;border-radius:20px;display:inline-block;margin-top:4px}
-.bmi-bar{height:8px;background:rgba(255,255,255,.4);border-radius:4px;margin:10px 0 6px;position:relative}
-.bmi-fill{height:100%;border-radius:4px}
-.bmi-ptr{position:absolute;top:-5px;width:18px;height:18px;border-radius:50%;background:#fff;border:2.5px solid var(--tx);transform:translateX(-50%);transition:left .5s}
-.wt-entry{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--br);font-size:13px}
-.wt-entry:last-child{border-bottom:none}
-.wt-delta-pos{color:var(--pb);font-weight:800;font-size:11px}
-.wt-delta-neg{color:var(--mb);font-weight:800;font-size:11px}
-.wt-bars{display:flex;align-items:flex-end;gap:3px;height:50px;margin:10px 0 4px}
-.wt-bar-w{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
-.wt-bar{width:100%;border-radius:3px 3px 0 0;background:var(--mb);min-height:4px}
-.wt-bar-l{font-size:8px;font-weight:700;color:var(--mu)}
-/* monthly kcal calendar grid */
-.kcal-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.kcal-cal-hdr{font-size:9px;font-weight:800;color:var(--mu);text-align:center;padding:2px 0}
-.kcal-cal-cell{border-radius:6px;padding:4px 2px;min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:1px;cursor:pointer;transition:opacity .15s;position:relative}
-.kcal-cal-cell.empty-day{background:transparent;cursor:default}
-.kcal-cal-cell.no-data{background:#f4f4f7}
-.kcal-cal-cell.under{background:#d4f4e4;border:1px solid var(--md)}
-.kcal-cal-cell.over{background:#ffd4d4;border:1px solid #f0a0a0}
-.kcal-cal-cell.future{background:#f4f4f7}
-.kcal-cal-cell.today-cell{box-shadow:0 0 0 2px var(--mb)}
-.cal-day-num{font-size:9px;font-weight:800;color:var(--mu)}
-.cal-day-kcal{font-size:8px;font-weight:900;line-height:1.2;text-align:center}
-.cal-day-kcal.under{color:#2a9a60}
-.cal-day-kcal.over{color:#d04040}
-.cal-day-icon{font-size:12px;line-height:1}
-.kcal-stat-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.kcal-stat{flex:1;min-width:80px;background:var(--bg);border-radius:10px;padding:8px 10px;border:1px solid var(--br);text-align:center}
-.kcal-stat-num{font-size:18px;font-weight:900}
-.kcal-stat-lbl{font-size:10px;color:var(--mu);font-weight:700;margin-top:2px}
-
-/* ── FOOD PAGE ── */
-.stabs{display:flex;gap:5px;background:var(--card);border-radius:var(--rs);padding:4px;border:1px solid var(--br);margin-bottom:12px}
-.stab{flex:1;border:none;background:transparent;border-radius:8px;padding:6px;font-size:12px;font-weight:800;color:var(--mu);cursor:pointer;font-family:'Nunito',sans-serif}
-.stab.active{background:var(--bg);color:var(--tx)}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.chip{display:flex;align-items:center;gap:4px;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;user-select:none;transition:all .15s;border:1.5px solid}
-.ch-ing-on{background:var(--ml);border-color:var(--md);color:#1a6a48}
-.ch-ing-off{background:#fff;border-color:#ddd;color:#bbb;text-decoration:line-through}
-.ch-to-on{background:var(--pl);border-color:#ffaa80;color:#a04020}
-.ch-fruit-on{background:#d4f4e4;border-color:#70c890;color:#1a7a50}
-.ch-fruit-off{background:#f4f4f7;border-color:#ddd;color:#aaa;text-decoration:line-through}
-.ch-to-off{background:#fff;border-color:#ddd;color:#bbb;text-decoration:line-through}
-.chip-x{background:none;border:none;cursor:pointer;color:inherit;font-size:11px;opacity:.6;padding:0}
-/* recipe cards */
+/* ── RECIPE CARDS ── */
 .rc{background:#fff;border:1px solid var(--br);border-radius:var(--r);padding:12px;margin-bottom:8px;box-shadow:var(--sh)}
-.rc-hdr{display:flex;align-items:flex-start;gap:9px}
-.rc-emoji{font-size:24px;line-height:1;flex-shrink:0}
-.rc-name{font-size:13px;font-weight:800;margin-bottom:3px}
-.rc-meta{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:4px;align-items:center}
+.rc-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px}
+.rc-emoji{font-size:26px;line-height:1;flex-shrink:0}
+.rc-info{flex:1;min-width:0}
+.rc-name{font-size:14px;font-weight:900;margin-bottom:2px}
+.rc-kcal{font-size:12px;font-weight:800;color:var(--gr)}
+.rc-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
 .rtag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:20px}
-.rc-ings{font-size:11px;color:var(--mu);font-weight:600}
-.rc-missing{font-size:10px;font-weight:800;color:var(--pb);margin-top:1px;margin-bottom:2px}
-.rc-acts{display:flex;gap:5px;margin-top:9px;border-top:1px solid var(--br);padding-top:9px}
-.rbtn{flex:1;background:var(--bg);border:1px solid var(--br);border-radius:7px;padding:5px;font-size:11px;font-weight:800;color:var(--mu);cursor:pointer;font-family:'Nunito',sans-serif}
-.rbtn.red{color:#e05050}
-/* recipe tags management */
-.tag-mgmt{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.tag-mgmt-chip{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:5px 10px 5px 12px;font-size:12px;font-weight:700;border:1.5px solid;cursor:default}
-.tag-mgmt-del{background:none;border:none;cursor:pointer;font-size:11px;opacity:.55;padding:0 0 0 2px;font-family:'Nunito',sans-serif;color:inherit}
-.tag-mgmt-del:hover{opacity:1}
+.rc-ings{font-size:11px;color:var(--mu);margin:6px 0 8px;line-height:1.6}
+.ing-ok{color:var(--gr);font-weight:800}
+.ing-miss{color:var(--re);font-weight:800}
+.rc-btns{display:flex;gap:6px;padding-top:8px;border-top:1px solid var(--br)}
+.rbtn{flex:1;background:var(--bg);border:1px solid var(--br);border-radius:8px;padding:6px;font-size:11px;font-weight:800;color:var(--mu);cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s;text-align:center}
+.rbtn:active{transform:scale(.95)}
+.rbtn.add{background:var(--gl);border-color:var(--gd);color:#1a6a48}
+.rbtn.del{color:var(--re)}
+.meal-pop{display:none;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--br)}
+.meal-pop.show{display:flex}
+.mpbtn{flex:1;background:var(--bg);border:1.5px solid var(--br);border-radius:9px;padding:7px 4px;font-size:11px;font-weight:800;color:var(--mu);cursor:pointer;font-family:'Nunito',sans-serif;text-align:center;transition:all .15s}
+.mpbtn:hover,.mpbtn:active{background:var(--gl);border-color:var(--gd);color:#1a6a48}
 
-/* ── RECIPE FILTER ── */
-.rc-filter{display:flex;gap:5px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;scrollbar-width:none}
-.rc-filter::-webkit-scrollbar{display:none}
-.rftag{flex-shrink:0;padding:5px 12px;border-radius:20px;border:1.5px solid var(--br);font-size:11px;font-weight:800;cursor:pointer;background:#fff;color:var(--mu);font-family:'Nunito',sans-serif;transition:all .15s}
-.rftag.active{background:var(--ll);border-color:var(--ld);color:#4a38a0}
+/* ── INGREDIENT LIST ── */
+.ing-item{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--br)}
+.ing-item:last-child{border-bottom:none}
+.ing-item-name{flex:1;font-size:13px;font-weight:700}
+.ing-tog{border:none;border-radius:20px;padding:4px 13px;font-size:11px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s}
+.ing-tog.have{background:var(--gl);color:#1a6a48}
+.ing-tog.lack{background:#ffd4d4;color:#b03030}
+.ing-item-del{background:none;border:none;color:#d8d8e8;cursor:pointer;font-size:14px;padding:4px 6px;border-radius:6px;flex-shrink:0}
+.ing-item-del:active{color:var(--re)}
 
-/* ── SNACK PAGE ── */
+/* ── TODAY PAGE ── */
+.today-summary{background:linear-gradient(135deg,var(--gl),var(--pl));border-radius:var(--r);padding:14px;margin-bottom:10px}
+.today-date-lbl{font-size:11px;font-weight:800;opacity:.65;margin-bottom:4px}
+.today-kcal-big{font-size:30px;font-weight:900;color:#2d7a5a;line-height:1}
+.today-kcal-lbl{font-size:11px;font-weight:700;color:var(--mu);margin-top:3px}
+.meal-card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);margin-bottom:10px;border:1px solid var(--br);overflow:hidden}
+.meal-hdr{display:flex;align-items:center;gap:8px;padding:10px 13px 8px;border-bottom:1px solid var(--br)}
+.meal-badge{font-size:12px;font-weight:900;padding:3px 10px;border-radius:20px}
+.b-br{background:#fff3b0;color:#9a6a00}
+.b-ln{background:var(--gl);color:#1a7a48}
+.b-dn{background:var(--pl);color:#4a38a0}
+.meal-sub-kcal{font-size:11px;color:var(--mu);font-weight:700;margin-left:auto}
+.dish-row{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--br)}
+.dish-emoji{font-size:22px;flex-shrink:0}
+.dish-name{flex:1;font-size:13px;font-weight:800;min-width:0}
+.dish-kcal{font-size:11px;color:var(--mu);font-weight:700;white-space:nowrap}
+.dish-del{background:none;border:none;color:#d8d8e8;cursor:pointer;font-size:14px;padding:4px;border-radius:6px}
+.dish-del:active{color:var(--re)}
+.meal-empty{padding:12px 13px;font-size:12px;color:var(--mu);font-weight:700;display:flex;align-items:center;gap:6px}
+.meal-add{padding:8px 13px 10px}
+.meal-add-btn{width:100%;background:none;border:1.5px dashed var(--br);border-radius:10px;padding:8px;font-size:12px;font-weight:800;color:var(--mu);cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s}
+.meal-add-btn:active{border-color:var(--gd);color:var(--gr);background:#f0fff8}
 
-.snk-stat{background:linear-gradient(135deg,var(--kl) 0%,var(--ll) 100%);border-radius:var(--r);padding:13px;margin-bottom:10px}
-.snk-num{font-size:26px;font-weight:900;color:var(--kb)}
-.ex-card{background:#fff;border-radius:var(--rs);padding:11px;border:1px solid var(--br);margin-top:9px}
-.ex-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--br);font-size:12px;font-weight:700}
-.ex-row:last-child{border-bottom:none}
-/* day detail modal */
-.dd-sum{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--br);margin-bottom:2px}
-.dd-sum-lbl{font-size:13px;font-weight:800}
-.dd-sum-val{font-size:16px;font-weight:900;color:var(--mb)}
-.dd-sum-val.over{color:var(--pb)}
-.dd-ex-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;padding:7px 0;border-bottom:1px solid var(--br);gap:6px}
-.dd-ex-row:last-child{border-bottom:none}
-.dd-ex-name{font-size:13px;font-weight:700}
-.dd-ex-km{font-size:12px;font-weight:800;color:var(--lb);text-align:right;min-width:52px}
-.dd-ex-min{font-size:12px;font-weight:900;color:var(--tx);text-align:right;min-width:60px}
-.dd-jump-btn{width:100%;margin-top:14px;background:linear-gradient(135deg,var(--ml),var(--ll));color:var(--lb);border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif}
-.dd-gap-row{font-size:12px;font-weight:800;padding:8px 10px;border-radius:10px;margin:8px 0 4px}
-.dd-gap-row.good{background:#d4f4e4;color:#1a6a48}
-.dd-gap-row.warn{background:#ffd4d4;color:#b03030}
-.dd-ex-log{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--br);font-size:12px;font-weight:700}
-.dd-ex-log:last-child{border-bottom:none}
-.dd-ex-log-kcal{color:var(--mb);font-weight:900}
-.ch-ex{background:var(--ll);border-color:var(--ld);color:#4a38a0}
-.ch-ex.sel{background:var(--lb);border-color:var(--lb);color:#fff}
-.dd-rec-btn{flex:1;background:linear-gradient(135deg,var(--lb),var(--ld));color:#fff;border:none;border-radius:12px;padding:10px;font-size:12px;font-weight:900;cursor:pointer;font-family:'Nunito',sans-serif}
-.ex-val{font-weight:900;color:var(--lb)}
-.snk-log-item{display:flex;align-items:center;gap:8px;background:#fff;border-radius:11px;padding:9px 12px;margin-bottom:6px;border:1px solid var(--br);font-size:12px;font-weight:700}
-.ch-snk{background:var(--kl);border-color:#ff88bb;color:var(--kb)}
-
-/* ── SETTINGS ── */
-.set-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--br)}
-.set-row:last-child{border-bottom:none}
-.set-lbl{font-size:13px;font-weight:700}
-.set-sub{font-size:10px;color:var(--mu);font-weight:600;margin-top:1px}
-.set-val{font-size:14px;font-weight:900;color:var(--mb)}
-.stepper{display:flex;align-items:center;gap:7px}
-.spbtn{width:26px;height:26px;border-radius:6px;background:var(--bg);border:1px solid var(--br);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--tx);transition:background .1s}
-.spbtn:active{background:var(--ml)}
-.prov-sel{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:11px}
-.prov-opt{flex:1;min-width:calc(33% - 5px);padding:7px 4px;border-radius:9px;border:1.5px solid var(--br);font-size:10px;font-weight:800;cursor:pointer;text-align:center;background:#fff;color:var(--mu);font-family:'Nunito',sans-serif;line-height:1.5}
-.prov-opt.active{background:var(--ll);border-color:var(--ld);color:#4a38a0}
-.member-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--br);font-size:13px;font-weight:700}
-.member-row:last-child{border-bottom:none}
+/* ── PICK LIST ── */
+.pick-item{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--br);border-radius:var(--rs);padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s}
+.pick-item.sel{border-color:var(--gd);background:linear-gradient(135deg,#f0fff8,#f8f0ff)}
+.pick-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--br);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s}
+.pick-item.sel .pick-check{background:var(--gr);border-color:var(--gr);color:#fff}
+.pick-emoji{font-size:22px;flex-shrink:0}
+.pick-info{flex:1;min-width:0}
+.pick-name{font-size:13px;font-weight:800;margin-bottom:1px}
+.pick-kcal{font-size:10px;color:var(--mu);font-weight:700}
 
 /* ── FORMS ── */
 .inp{background:#fff;border:1.5px solid var(--br);border-radius:9px;padding:8px 11px;font-size:13px;font-family:'Nunito',sans-serif;color:var(--tx);outline:none;width:100%}
-.inp:focus{border-color:var(--md)}
-.inp-sm{max-width:85px}
-.add-row{display:flex;gap:6px;margin-bottom:4px}
+.inp:focus{border-color:var(--gd)}
+.add-row{display:flex;gap:6px}
 .add-row .inp{flex:1}
-.add-btn{background:var(--mb);border:none;border-radius:9px;padding:8px 13px;font-size:12px;font-weight:800;color:#fff;cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap}
+.add-btn-s{background:var(--gr);border:none;border-radius:9px;padding:8px 13px;font-size:12px;font-weight:800;color:#fff;cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap}
 .lbl{font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;display:block;margin:10px 0 4px}
-.row2{display:flex;gap:7px}
-.row2>div{flex:1}
-.btn{background:var(--bg);border:1px solid var(--br);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:800;color:var(--mu);cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s}
-.btn:active{transform:scale(.94)}
-/* AI estimate button */
-.ai-btn{background:linear-gradient(135deg,#7b6ee8,#e870a0);border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:800;color:#fff;cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;transition:transform .15s}
+
+/* ── BIG BUTTONS ── */
+.gbtn{border:none;border-radius:var(--r);padding:13px;font-size:14px;font-weight:900;color:#fff;cursor:pointer;font-family:'Nunito',sans-serif;transition:transform .15s;width:100%}
+.gbtn:active{transform:scale(.97)}
+.g-green{background:linear-gradient(135deg,#3dbf87,#7b6ee8);box-shadow:0 4px 18px rgba(61,191,135,.3)}
+.g-blue{background:linear-gradient(135deg,#4090f0,#7b6ee8);box-shadow:0 4px 18px rgba(64,144,240,.3)}
+.g-gray{background:linear-gradient(135deg,#c0c0cc,#a0a0b0);box-shadow:none}
+.ai-btn{background:linear-gradient(135deg,#7b6ee8,#e870a0);border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:800;color:#fff;cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap;flex-shrink:0}
 .ai-btn:active{transform:scale(.94)}
 .ai-btn:disabled{opacity:.6;cursor:not-allowed}
-/* tag selector */
+
+/* ── TAG SELECTOR ── */
 .tag-sel{display:flex;gap:5px;flex-wrap:wrap}
 .topt{padding:5px 10px;border-radius:20px;border:1.5px solid var(--br);font-size:11px;font-weight:700;cursor:pointer;background:#fff;color:var(--mu);font-family:'Nunito',sans-serif;transition:all .15s}
-.topt.sel{background:var(--ml);border-color:var(--md);color:#1a6a48}
+.topt.sel{background:var(--gl);border-color:var(--gd);color:#1a6a48}
+
+/* ── CHIPS ── */
+.chips{display:flex;flex-wrap:wrap;gap:6px;min-height:8px}
+.chip{display:flex;align-items:center;gap:4px;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;background:var(--gl);border:1.5px solid var(--gd);color:#1a6a48}
+.chip-x{background:none;border:none;cursor:pointer;font-size:10px;opacity:.6;padding:0;color:inherit;font-family:'Nunito',sans-serif}
+
+/* ── PROVIDER SELECTOR ── */
+.prov-sel{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.prov-opt{flex:1;min-width:calc(33% - 4px);padding:7px 4px;border-radius:9px;border:1.5px solid var(--br);font-size:10px;font-weight:800;cursor:pointer;text-align:center;background:#fff;color:var(--mu);font-family:'Nunito',sans-serif;line-height:1.5}
+.prov-opt.active{background:var(--pl);border-color:var(--pd);color:#4a38a0}
+
+/* ── SUBTABS ── */
+.stabs{display:flex;gap:5px;background:var(--card);border-radius:var(--rs);padding:4px;border:1px solid var(--br);margin-bottom:12px}
+.stab{flex:1;border:none;background:transparent;border-radius:8px;padding:7px;font-size:12px;font-weight:800;color:var(--mu);cursor:pointer;font-family:'Nunito',sans-serif}
+.stab.active{background:var(--bg);color:var(--tx)}
 
 /* ── MODALS ── */
 .overlay{position:fixed;inset:0;background:rgba(60,60,80,.45);z-index:200;display:none;align-items:flex-end;justify-content:center}
 .overlay.show{display:flex}
 .mbox{background:var(--bg);border-radius:22px 22px 0 0;padding:18px;width:100%;max-width:430px;max-height:92vh;overflow-y:auto;animation:su .3s ease}
 @keyframes su{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
-.m-title{font-size:16px;font-weight:900;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
-.m-close{background:var(--bg);border:none;border-radius:7px;width:25px;height:25px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.m-title{font-size:16px;font-weight:900;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.m-close{background:var(--bg);border:none;border-radius:7px;width:28px;height:28px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pick-sticky{position:sticky;bottom:0;background:var(--bg);padding:10px 0 0;margin-top:8px}
 
 /* ── MISC ── */
 .dots{display:inline-flex;gap:3px;align-items:center}
@@ -283,21 +172,9 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
 @keyframes bn{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#3a3a4a;color:#fff;padding:8px 16px;border-radius:18px;font-size:12px;font-weight:700;z-index:9999;transition:transform .3s;white-space:nowrap;max-width:92vw;text-align:center}
 .toast.show{transform:translateX(-50%) translateY(0)}
-.celeb-wrap{position:fixed;inset:0;pointer-events:none;z-index:500;display:flex;align-items:center;justify-content:center}
-.celeb-msg{background:linear-gradient(135deg,#3dbf87,#7b6ee8);color:#fff;font-size:20px;font-weight:900;padding:16px 26px;border-radius:18px;box-shadow:0 12px 40px rgba(61,191,135,.4);opacity:0;transform:scale(.7);transition:all .3s cubic-bezier(.34,1.56,.64,1);text-align:center;line-height:1.5}
-.celeb-msg.show{opacity:1;transform:scale(1)}
-.empty{text-align:center;padding:22px 14px;color:var(--mu);font-size:12px;font-weight:600;line-height:1.7}
-.empty .e{font-size:32px;display:block;margin-bottom:6px}
+.empty{text-align:center;padding:28px 14px;color:var(--mu);font-size:12px;font-weight:600;line-height:1.8}
+.empty .e{font-size:36px;display:block;margin-bottom:8px}
 .note{font-size:11px;color:var(--mu);font-weight:600;line-height:1.6;margin-top:6px}
-.confetti-particle{position:fixed;pointer-events:none;z-index:600;font-size:14px;line-height:1;animation:confettiFly var(--dur,.8s) ease-out forwards}
-@keyframes confettiFly{0%{transform:translate(0,0) scale(1) rotate(0deg);opacity:1}100%{transform:translate(var(--tx),var(--ty)) scale(.4) rotate(var(--rot));opacity:0}}
-
-/* ── THEME ── */
-.theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
-.theme-opt{border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;border:2.5px solid transparent;transition:all .2s}
-.theme-opt.active{border-color:var(--tx);transform:scale(1.04)}
-.theme-swatch{height:24px;border-radius:8px;margin-bottom:5px}
-.theme-name{font-size:10px;font-weight:800;color:var(--tx)}
 </style>
 </head>
 <body>
@@ -305,489 +182,230 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--tx);min-he
 <!-- ══ HEADER ══ -->
 <div class="hdr">
   <div class="hdr-top">
-    <div><div class="logo">🥗 今天吃什么</div><div class="logo-sub">聪明吃，健康瘦 ✨</div></div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <div class="streak" id="streakEl">📅 本月打卡 0 天</div>
-      <span class="sync-dot offline" id="syncDot" title="数据同步状态"></span>
+    <div>
+      <div class="logo">🥗 吃什么</div>
+      <div class="logo-sub">简单吃，健康过 ✨</div>
     </div>
+    <button class="gear-btn" id="gearBtn" onclick="showModal('settingsModal')" title="未连接 · 点击设置">⚙️</button>
   </div>
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('plan',this)">📅 计划</button>
-    <button class="tab" onclick="switchTab('data',this)">📊 数据</button>
-    <button class="tab" onclick="switchTab('food',this)">🍽️ 食材</button>
-    <button class="tab" onclick="switchTab('snack',this)">🍬 零食</button>
-    <button class="tab" onclick="switchTab('settings',this)">⚙️ 设置</button>
+    <button class="tab" onclick="switchTab('recipes',this)">🍽️ 菜谱</button>
+    <button class="tab" onclick="switchTab('fridge',this)">🥬 食材</button>
+    <button class="tab active" onclick="switchTab('today',this)">📅 今日</button>
   </div>
 </div>
 
-<!-- ══ PLAN PAGE ══ -->
-<div id="page-plan" class="page active">
-  <div class="wdots" id="wdots"></div>
-  <div class="day-nav">
-    <button class="nbtn" onclick="changeDay(-1)">‹</button>
-    <div><div class="dname" id="dname">—</div><div class="ddate" id="ddate">—</div></div>
-    <button class="nbtn" onclick="changeDay(1)">›</button>
+<!-- ══ RECIPES PAGE ══ -->
+<div id="page-recipes" class="page">
+  <div class="tag-bar" id="rcTagBar"></div>
+  <button class="gbtn g-green" style="margin-bottom:11px" onclick="openRecipeModal(null)">➕ 添加菜谱</button>
+  <div id="recipeList"></div>
+</div>
+
+<!-- ══ FRIDGE PAGE ══ -->
+<div id="page-fridge" class="page">
+  <div class="card">
+    <span class="clbl">食材库存</span>
+    <div id="ingList"></div>
+    <div class="divl"></div>
+    <div class="add-row">
+      <input class="inp" id="ingInput" placeholder="添加食材..." onkeydown="if(event.key==='Enter')addIng()">
+      <button class="add-btn-s" onclick="addIng()">添加</button>
+    </div>
   </div>
-  <div class="dsum">
-    <div>
-      <div class="dsum-lbl">今日热量</div>
-      <div class="dsum-kcal" id="dkcal">— kcal</div>
-      <div class="pbar"><div class="pfill" id="pbar" style="width:0%"></div></div>
-    </div>
-    <div style="text-align:right">
-      <div class="dsum-lbl">目标</div>
-      <div style="font-size:11px;font-weight:700;color:#5a48b0" id="goalEl">1400 kcal</div>
-      <div style="font-size:11px;font-weight:800;margin-top:4px;color:var(--mb)" id="kcalSt">—</div>
-    </div>
+</div>
+
+<!-- ══ TODAY PAGE ══ -->
+<div id="page-today" class="page active">
+  <div class="today-summary">
+    <div class="today-date-lbl" id="todayDateLbl"></div>
+    <div class="today-kcal-big" id="todayKcalBig">0</div>
+    <div class="today-kcal-lbl">kcal 今日累计</div>
   </div>
   <div id="mealsArea"></div>
 </div>
 
-<!-- ══ DATA PAGE ══ -->
-<div id="page-data" class="page">
-  <div class="sec">📊 我的身体数据</div>
-  <div class="bmi-card" id="bmiCard">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div>
-        <div style="font-size:11px;font-weight:800;opacity:.7">BMI 指数</div>
-        <div class="bmi-num" id="bmiNum">—</div>
-        <div class="bmi-cls" id="bmiCls" style="background:rgba(255,255,255,.4);color:#3a3a4a">请输入身高体重</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:11px;font-weight:800;opacity:.7">当前体重</div>
-        <div style="font-size:22px;font-weight:900;color:#2d7a5a" id="curWt">—</div>
-        <div style="font-size:11px;font-weight:700;color:#5a48b0" id="curWtGoal"></div>
-      </div>
-    </div>
-    <div class="bmi-bar"><div class="bmi-fill" id="bmiFill" style="width:0%;background:linear-gradient(90deg,#4090f0,#3dbf87,#f0c030,#e05050)"></div><div class="bmi-ptr" id="bmiPtr" style="left:50%"></div></div>
-    <div style="display:flex;justify-content:space-between;font-size:9px;font-weight:700;opacity:.7"><span>偏瘦</span><span>正常</span><span>超重</span><span>肥胖</span></div>
-  </div>
-  <div class="card">
-    <span class="clbl">+ 记录今日体重</span>
-    <div class="add-row">
-      <input class="inp" type="number" id="wtInput" placeholder="体重 (kg)" step="0.1">
-      <input class="inp inp-sm" type="date" id="wtDate">
-      <button class="add-btn" onclick="addWeight()">记录</button>
-    </div>
-    <div id="bmiBarChart" style="margin-top:8px"></div>
-  </div>
-  <div class="card">
-    <span class="clbl">体重历史</span>
-    <div id="wtLog"><div class="empty"><span class="e">⚖️</span>还没有记录，开始记录体重变化吧！</div></div>
-  </div>
-  <!-- Monthly kcal calendar -->
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
-      <span class="clbl" style="margin:0">月度热量总览</span>
-      <div style="display:flex;gap:4px;align-items:center">
-        <button class="btn" onclick="changeYear(-1)">‹</button>
-        <span id="calYearLabel" style="font-size:12px;font-weight:800;min-width:42px;text-align:center"></span>
-        <button class="btn" onclick="changeYear(1)">›</button>
-        <button class="btn" onclick="changeMonth(-1)" style="margin-left:4px">‹</button>
-        <span id="calMonthNumLabel" style="font-size:12px;font-weight:800;min-width:26px;text-align:center"></span>
-        <button class="btn" onclick="changeMonth(1)">›</button>
-      </div>
-    </div>
-    <!-- weekday headers -->
-    <div class="kcal-cal-grid" id="kcalCalHeader"></div>
-    <!-- day cells -->
-    <div class="kcal-cal-grid" id="kcalCalGrid" style="margin-top:3px"></div>
-    <!-- stats -->
-    <div class="kcal-stat-row" id="kcalStats" style="margin-top:10px"></div>
-    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
-      <span style="font-size:10px;font-weight:700;display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:3px;background:#d4f4e4;border:1px solid var(--md);display:inline-block"></span>达标</span>
-      <span style="font-size:10px;font-weight:700;display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:3px;background:#ffd4d4;border:1px solid #f0a0a0;display:inline-block"></span>超标</span>
-      <span style="font-size:10px;font-weight:700;display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:3px;background:#f4f4f7;display:inline-block"></span>暂无记录</span>
-    </div>
-  </div>
-</div>
-
-<!-- ══ FOOD PAGE ══ -->
-<div id="page-food" class="page">
-  <div class="stabs">
-    <button class="stab active" id="stab-ing" onclick="switchFood('ing',this)">🧺 食材库</button>
-    <button class="stab" id="stab-recipe" onclick="switchFood('recipe',this)">📖 菜谱库</button>
-  </div>
-  <div id="fsub-ing">
-    <input class="inp" placeholder="🔍 搜索食材..." oninput="renderIng(this.value)" style="margin-bottom:9px">
-    <div class="chips" id="ingChips"></div>
-    <div class="add-row">
-      <input class="inp" id="ingIn" placeholder="添加食材名称" list="ingDatalist" onkeydown="if(event.key==='Enter')addIng()">
-      <button class="add-btn" onclick="addIng()">添加</button>
-    </div>
-    <datalist id="ingDatalist"></datalist>
-    <div class="divl"></div>
-    <!-- 水果区 -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div class="sec" style="margin:0">🍎 水果库</div>
-      <span id="fruitNeedBuy" style="font-size:11px;font-weight:800;color:var(--pb);display:none"></span>
-    </div>
-    <p class="note" style="margin-bottom:9px;margin-top:-4px">绿色=家里有，灰色=需要采购。可作为菜谱食材引用。</p>
-    <div class="chips" id="fruitChips"></div>
-    <div class="add-row">
-      <input class="inp" id="fruitIn" placeholder="水果名称" onkeydown="if(event.key==='Enter')addFruit()">
-      <input class="inp inp-sm" id="fruitKcal" type="number" placeholder="kcal/份">
-      <button class="add-btn" onclick="addFruit()">添加</button>
-    </div>
-    <div class="divl"></div>
-    <div class="sec">🛵 外卖选项</div>
-    <div class="chips" id="toChips"></div>
-    <div class="add-row">
-      <input class="inp" id="toIn" placeholder="外卖店名/菜品" onkeydown="if(event.key==='Enter')addTO()">
-      <input class="inp inp-sm" id="toKcal" type="number" placeholder="kcal">
-      <button class="ai-btn" id="toLibAiBtn" onclick="aiEstimateTOLib()">AI</button>
-      <button class="add-btn" onclick="addTO()">添加</button>
-    </div>
-  </div>
-  <div id="fsub-recipe" style="display:none">
-    <!-- Tag management -->
-    <div class="card" style="margin-bottom:10px">
-      <span class="clbl">🏷️ 菜品分类标签</span>
-      <div class="tag-mgmt" id="tagMgmt"></div>
-      <div class="add-row">
-        <input class="inp" id="tagIn" placeholder="新增分类名称" onkeydown="if(event.key==='Enter')addRecipeTag()">
-        <button class="add-btn" onclick="addRecipeTag()">添加</button>
-      </div>
-    </div>
-    <!-- Recipe filter + list -->
-    <div class="rc-filter" id="rcFilter"></div>
-    <button class="gbtn g-green" style="margin-bottom:11px" onclick="showRecipeModal(null)">➕ 添加菜谱</button>
-    <div id="recipeList"></div>
-  </div>
-</div>
-
-<!-- ══ SNACK PAGE ══ -->
-<div id="page-snack" class="page">
-  <div class="sec">🍬 零食记录</div>
-  <div class="snk-stat">
-    <div style="display:flex;justify-content:space-between">
-      <div>
-        <div style="font-size:10px;font-weight:800;opacity:.7">本周已吃</div>
-        <div style="display:flex;align-items:baseline;gap:3px">
-          <div class="snk-num" id="snkCount">0</div>
-          <div style="font-size:13px;font-weight:800;color:var(--kb)">次</div>
-        </div>
-        <div style="font-size:11px;font-weight:700;color:#5a48b0">限额 <span id="snkLimit">3</span> 次/周</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:10px;font-weight:800;opacity:.7">额外热量</div>
-        <div style="font-size:22px;font-weight:900;color:var(--kb)" id="snkKcal">0</div>
-        <div style="font-size:11px;font-weight:700;color:#5a48b0">kcal 本周</div>
-      </div>
-    </div>
-    <div class="ex-card" id="exCard" style="display:none">
-      <div style="font-size:11px;font-weight:800;color:#5a48b0;margin-bottom:5px">🏃 需要多少运动消耗？</div>
-      <div class="ex-row"><span>🚶 快走</span><span class="ex-val" id="exWalk">—</span></div>
-      <div class="ex-row"><span>🏃 跑步</span><span class="ex-val" id="exRun">—</span></div>
-      <div class="ex-row"><span>💃 跳操</span><span class="ex-val" id="exDance">—</span></div>
-      <div class="ex-row"><span>🧘 平板支撑</span><span class="ex-val" id="exPlank">—</span></div>
-    </div>
-  </div>
-  <div class="sec" style="margin-top:4px">今天的零食</div>
-  <div id="snkTodayLog"></div>
-  <button class="gbtn g-pink" style="margin-bottom:14px" onclick="showSnackModal()">+ 记录一次零食</button>
-  <div class="sec">📦 零食库</div>
-  <div class="chips" id="snkLib"></div>
-  <div class="add-row">
-    <input class="inp" id="snkLibName" placeholder="零食名称">
-    <input class="inp inp-sm" id="snkLibKcal" type="number" placeholder="kcal">
-    <button class="add-btn" onclick="addSnkLib()">添加</button>
-  </div>
-</div>
-
-<!-- ══ SETTINGS PAGE ══ -->
-<div id="page-settings" class="page">
-  <div class="sec">⚙️ 偏好设置</div>
-  <div class="card">
-    <div class="set-row">
-      <div><div class="set-lbl">每日热量目标</div><div class="set-sub">减重推荐 1200~1500 kcal</div></div>
-      <div class="stepper"><button class="spbtn" onclick="adj('calories',-50)">−</button><div class="set-val" id="sv-calories">1400</div><button class="spbtn" onclick="adj('calories',50)">+</button></div>
-    </div>
-    <div class="set-row">
-      <div><div class="set-lbl">每周零食限额</div><div class="set-sub">偶尔吃一点也没关系</div></div>
-      <div class="stepper"><button class="spbtn" onclick="adj('snackLimit',-1)">−</button><div class="set-val" id="sv-snackLimit">3</div><button class="spbtn" onclick="adj('snackLimit',1)">+</button></div>
-    </div>
-  </div>
-  <div class="card">
-    <span class="clbl">身高（BMI 及 BMR 计算用）</span>
-    <input class="inp" type="number" id="heightIn" placeholder="如：165" style="margin-bottom:8px">
-    <span class="clbl">年龄（BMR 计算用）</span>
-    <input class="inp" type="number" id="ageIn" placeholder="如：28" style="margin-bottom:8px">
-    <span class="clbl">🚫 饮食禁忌 / 过敏</span>
-    <textarea class="inp" id="avoidIn" rows="2" style="resize:none" placeholder="如：不吃辣、海鲜过敏..."></textarea>
-    <span class="clbl" style="margin-top:10px">🎯 目标体重 (kg)</span>
-    <div class="row2" style="margin-bottom:6px">
-      <div><input class="inp" type="number" id="goalIn" placeholder="如：65" step="0.5" oninput="clearGoalAdvice()"></div>
-      <div><button class="ai-btn" id="goalAiBtn" onclick="aiEstimateCalories()" style="width:100%;padding:8px">🤖 AI估算每日热量</button></div>
-    </div>
-    <div id="goalAdvice" style="font-size:11px;font-weight:700;color:var(--mb);line-height:1.7;min-height:0"></div>
-  </div>
-  <div class="card">
-    <span class="clbl">🤖 AI 接口设置（卡路里估算）</span>
-    <div class="prov-sel" id="provSel">
-      <div class="prov-opt active" data-p="siliconflow" onclick="selProv(this)">🟠 硅基流动<br><span style="font-size:9px;opacity:.7">送¥14·国内直连</span></div>
-      <div class="prov-opt" data-p="deepseek" onclick="selProv(this)">🟢 DeepSeek<br><span style="font-size:9px;opacity:.7">国产·超低价</span></div>
-      <div class="prov-opt" data-p="groq" onclick="selProv(this)">⚡ Groq<br><span style="font-size:9px;opacity:.7">极速·有免费</span></div>
-      <div class="prov-opt" data-p="gemini" onclick="selProv(this)">🔵 Gemini<br><span style="font-size:9px;opacity:.7">需翻墙</span></div>
-      <div class="prov-opt" data-p="claude" onclick="selProv(this)">🟣 Claude<br><span style="font-size:9px;opacity:.7">质量最高</span></div>
-    </div>
-    <input class="inp" type="password" id="apiKeyIn" placeholder="粘贴 API Key...">
-    <p class="note" id="apiHint"></p>
-    <p class="note" style="color:#e05050;margin-top:4px">⚠️ 仅存储在本设备，不会上传任何服务器</p>
-  </div>
-  <button class="gbtn g-green" onclick="saveSettings()" style="margin-top:4px">💾 保存所有设置</button>
-  <div style="display:flex;gap:7px;margin-top:8px">
-    <button class="gbtn" style="flex:1;background:linear-gradient(135deg,#f0a030,#e87050);box-shadow:0 4px 18px rgba(240,160,48,.3)" onclick="showModal('themeModal')">🎨 选择主题颜色</button>
-  </div>
-  <!-- Cloud sync -->
-  <div class="card" style="margin-top:10px">
-    <span class="clbl">☁️ 云同步设置</span>
-    <p class="note" style="margin-bottom:10px">填写同一个 Supabase 数据库的 URL 和 Key，即可与家人实时同步数据。需在 Supabase 控制台开启 Realtime → <strong>app_settings</strong> 表的 Replication。</p>
-    <span class="clbl">Project URL</span>
-    <input class="inp" id="sbUrlIn" placeholder="https://xxxxxx.supabase.co" style="margin-bottom:8px;font-size:12px">
-    <span class="clbl">Publishable Key</span>
-    <input class="inp" id="sbKeyIn" placeholder="sb_publishable_..." style="margin-bottom:10px;font-size:12px">
-    <div style="display:flex;gap:7px">
-      <button class="gbtn g-green" style="flex:1;font-size:12px;padding:10px" onclick="saveCloudSettings()">🔗 连接数据库</button>
-      <button class="gbtn" style="flex:1;font-size:12px;padding:10px;background:linear-gradient(135deg,#d0d0d8,#b0b0b8)" onclick="disconnectCloud()">⛔ 断开同步</button>
-    </div>
-    <button class="gbtn g-blue" style="width:100%;font-size:12px;padding:10px;margin-top:7px" onclick="manualSync()">🔄 立即同步</button>
-    <div id="cloudStatus" style="margin-top:8px;font-size:11px;font-weight:700;color:var(--mu)"></div>
-  </div>
-  <!-- Data backup -->
-  <div class="card" style="margin-top:10px">
-    <span class="clbl">📦 数据备份</span>
-    <p class="note" style="margin-bottom:10px">导出 JSON 文件备份，或导入恢复数据。</p>
-    <div style="display:flex;gap:7px">
-      <button class="gbtn g-blue" style="flex:1;font-size:12px;padding:10px" onclick="exportData()">📤 导出数据</button>
-      <label class="gbtn g-purple" style="flex:1;font-size:12px;padding:10px;text-align:center;cursor:pointer">📥 导入数据<input type="file" accept=".json" style="display:none" onchange="importData(this)"></label>
-    </div>
-  </div>
-</div>
-
 <!-- ══ MODALS ══ -->
-
-<!-- Pick dish modal -->
-<div class="overlay" id="pickDishModal">
-  <div class="mbox">
-    <div class="m-title">
-      <span id="pickDishTitle">添加菜品</span>
-      <button class="m-close" onclick="hideModal('pickDishModal')">✕</button>
-    </div>
-    <div class="pick-tag-bar" id="pickTagBar"></div>
-    <input class="inp" id="pickSearch" placeholder="🔍 搜索菜谱名称..." oninput="renderPickList()" style="margin-bottom:9px">
-    <div id="pickList"></div>
-    <!-- takeout section — shown when 外卖 tab active -->
-    <div id="pickToSection" style="display:none">
-      <div class="clbl" style="margin-bottom:6px">从外卖库选择</div>
-      <div id="pickToList"></div>
-      <div class="custom-dish-area" style="margin-top:6px">
-        <div class="clbl" style="margin-bottom:6px">自定义外卖菜品</div>
-        <div class="add-row" style="margin-bottom:0">
-          <input class="inp" id="customToName" placeholder="外卖名称">
-          <input class="inp inp-sm" id="customToKcal" type="number" placeholder="kcal">
-          <button class="ai-btn" id="toAiBtn" onclick="aiEstimateTO()">AI估算</button>
-        </div>
-      </div>
-    </div>
-    <!-- custom dish (non-takeout) -->
-    <div class="custom-dish-area" id="pickCustomArea">
-      <div class="clbl" style="margin-bottom:6px">✏️ 自定义菜品（不在菜谱库中）</div>
-      <div class="add-row" style="margin-bottom:0">
-        <input class="inp" id="customDishName" placeholder="菜品名称">
-        <input class="inp inp-sm" id="customDishKcal" type="number" placeholder="kcal">
-        <button class="ai-btn" id="customAiBtn" onclick="aiEstimateCustom()">AI估算</button>
-      </div>
-    </div>
-    <div class="pick-sticky">
-      <button class="gbtn g-green" id="pickConfirmBtn" onclick="confirmPick()">✓ 确认添加</button>
-    </div>
-  </div>
-</div>
 
 <!-- Recipe modal -->
 <div class="overlay" id="recipeModal">
   <div class="mbox">
     <div class="m-title">
-      <span id="recipeMTitle">添加菜谱</span>
+      <span id="rcModalTitle">添加菜谱</span>
       <button class="m-close" onclick="hideModal('recipeModal')">✕</button>
     </div>
     <span class="lbl">菜品名称</span>
     <input class="inp" id="rcName" placeholder="如：番茄炒蛋" style="margin-bottom:8px" oninput="autoEmoji(this.value)">
-    <span class="lbl">emoji 图标</span>
-    <input class="inp" id="rcEmoji" placeholder="自动联想，可修改" style="margin-bottom:8px;max-width:120px" oninput="this.dataset.userSet='1'">
-    <span class="lbl">热量 (kcal / 份)</span>
-    <div class="row2" style="margin-bottom:8px">
-      <div><input class="inp" id="rcKcal" type="number" placeholder="如：320"></div>
-      <div><button class="ai-btn" id="rcAiBtn" style="width:100%;padding:8px" onclick="aiEstimateRecipe()">🤖 AI估算热量</button></div>
+    <span class="lbl">Emoji 图标</span>
+    <input class="inp" id="rcEmoji" placeholder="自动联想，可修改" style="margin-bottom:8px;max-width:110px" oninput="this.dataset.userSet='1'">
+    <span class="lbl">热量（kcal / 份）</span>
+    <div class="add-row" style="margin-bottom:8px">
+      <input class="inp" id="rcKcal" type="number" placeholder="如：320">
+      <button class="ai-btn" id="rcAiBtn" onclick="aiEstimateRecipe()">🤖 AI估算</button>
     </div>
-    <span class="lbl">分类标签（可多选）</span>
+    <span class="lbl">分类标签</span>
     <div class="tag-sel" id="rcTagSel" style="margin-bottom:8px"></div>
     <span class="lbl">所需食材</span>
-    <div class="chips" id="rcIngSel" style="margin-bottom:8px;min-height:10px"></div>
-    <div class="add-row" style="margin-bottom:12px">
-      <input class="inp" id="rcIngAdd" placeholder="搜索或输入食材" list="rcIngDatalist">
-      <button class="add-btn" onclick="addRcIng()">添加</button>
+    <div class="chips" id="rcIngChips" style="margin-bottom:6px"></div>
+    <div class="add-row" style="margin-bottom:10px">
+      <input class="inp" id="rcIngInput" placeholder="输入食材名称" list="rcIngDatalist">
+      <button class="add-btn-s" onclick="addRcIng()">添加</button>
     </div>
     <datalist id="rcIngDatalist"></datalist>
     <span class="lbl">备注（可选）</span>
-    <textarea class="inp" id="rcNote" rows="2" style="resize:none;margin-bottom:12px" placeholder="做法要点、口味备注..."></textarea>
+    <textarea class="inp" id="rcNote" rows="2" style="resize:none;margin-bottom:14px" placeholder="做法要点、口味备注..."></textarea>
     <button class="gbtn g-green" onclick="saveRecipe()">💾 保存菜谱</button>
   </div>
 </div>
 
-<!-- Snack modal -->
-<div class="overlay" id="snackModal">
+<!-- Add dish to today modal -->
+<div class="overlay" id="addDishModal">
   <div class="mbox">
     <div class="m-title">
-      🍬 记录零食
-      <button class="m-close" onclick="hideModal('snackModal')">✕</button>
+      <span id="addDishTitle">添加菜品</span>
+      <button class="m-close" onclick="hideModal('addDishModal')">✕</button>
     </div>
-    <span class="lbl">从零食库快速选择</span>
-    <div class="chips" id="snkQuickSel" style="margin-bottom:10px"></div>
-    <div class="divl"></div>
-    <span class="lbl">自定义</span>
-    <div class="add-row" style="margin-bottom:6px">
-      <input class="inp" id="snkName" placeholder="零食名称">
-      <input class="inp inp-sm" id="snkKcalIn" type="number" placeholder="kcal">
-      <button class="ai-btn" id="snkAiBtn" onclick="aiEstimateSnack()">AI估算</button>
+    <div class="stabs">
+      <button class="stab active" id="stab-lib" onclick="switchAddTab('lib',this)">从菜谱选</button>
+      <button class="stab" id="stab-manual" onclick="switchAddTab('manual',this)">手动输入</button>
     </div>
-    <button class="gbtn g-pink" onclick="logSnack()" style="margin-top:8px">✓ 记录</button>
+    <div id="addTab-lib">
+      <input class="inp" id="pickSearch" placeholder="🔍 搜索菜谱..." oninput="renderPickList()" style="margin-bottom:8px">
+      <div class="tag-bar" id="pickTagBar"></div>
+      <div id="pickList"></div>
+      <div class="pick-sticky">
+        <button class="gbtn g-green" onclick="confirmPick()">✓ 加入餐次</button>
+      </div>
+    </div>
+    <div id="addTab-manual" style="display:none">
+      <span class="lbl">菜品名称</span>
+      <input class="inp" id="manName" placeholder="如：外卖黄焖鸡" style="margin-bottom:8px">
+      <span class="lbl">热量（kcal）</span>
+      <div class="add-row" style="margin-bottom:14px">
+        <input class="inp" id="manKcal" type="number" placeholder="如：650">
+        <button class="ai-btn" id="manAiBtn" onclick="aiEstimateManual()">🤖 AI估算</button>
+      </div>
+      <button class="gbtn g-green" onclick="confirmManual()">✓ 加入餐次</button>
+    </div>
   </div>
 </div>
 
-<!-- Theme modal -->
-<div class="overlay" id="themeModal">
-  <div class="mbox">
-    <div class="m-title">🎨 主题颜色<button class="m-close" onclick="hideModal('themeModal')">✕</button></div>
-    <div class="theme-grid" id="themeGrid"></div>
-  </div>
-</div>
-
-<!-- Day detail modal -->
-<div class="overlay" id="dayDetailModal">
-  <div class="mbox">
-    <div class="m-title"><span id="ddTitle">—</span><button class="m-close" onclick="hideModal('dayDetailModal')">✕</button></div>
-    <div id="ddContent"></div>
-  </div>
-</div>
-
-<!-- Exercise record modal -->
-<div class="overlay" id="exerciseModal">
+<!-- Settings modal -->
+<div class="overlay" id="settingsModal">
   <div class="mbox">
     <div class="m-title">
-      <span>💪 记录运动</span>
-      <button class="m-close" onclick="closeExerciseModal()">✕</button>
+      ⚙️ 设置
+      <button class="m-close" onclick="hideModal('settingsModal')">✕</button>
     </div>
-    <span class="lbl">运动类型</span>
-    <div class="chips" id="exTypeSel" style="margin-bottom:10px"></div>
-    <div id="exCustomRow" style="display:none;margin-bottom:10px">
-      <input class="inp" id="exCustomName" placeholder="自定义运动名称">
-    </div>
-    <div class="row2" style="margin-bottom:10px">
-      <div>
-        <span class="lbl">时长（分钟）</span>
-        <input class="inp" id="exMinIn" type="number" placeholder="如：30" oninput="autoCalcExKcal()">
+    <div class="card" style="margin-bottom:10px">
+      <span class="clbl">🤖 AI 热量估算接口</span>
+      <div class="prov-sel" id="provSel">
+        <div class="prov-opt active" data-p="siliconflow" onclick="selProv(this)">🟠 硅基流动<br><span style="font-size:9px;opacity:.7">国内直连</span></div>
+        <div class="prov-opt" data-p="deepseek" onclick="selProv(this)">🟢 DeepSeek<br><span style="font-size:9px;opacity:.7">国产低价</span></div>
+        <div class="prov-opt" data-p="groq" onclick="selProv(this)">⚡ Groq<br><span style="font-size:9px;opacity:.7">有免费额度</span></div>
+        <div class="prov-opt" data-p="gemini" onclick="selProv(this)">🔵 Gemini<br><span style="font-size:9px;opacity:.7">需翻墙</span></div>
+        <div class="prov-opt" data-p="claude" onclick="selProv(this)">🟣 Claude<br><span style="font-size:9px;opacity:.7">质量最高</span></div>
       </div>
-      <div>
-        <span class="lbl">消耗热量 kcal</span>
-        <input class="inp" id="exKcalIn" type="number" placeholder="自动计算，可修改">
+      <input class="inp" type="password" id="apiKeyIn" placeholder="粘贴 API Key...">
+      <p class="note" id="apiHint"></p>
+      <p class="note" style="color:#e05050;margin-top:4px">⚠️ 仅存本设备，不上传任何服务器</p>
+    </div>
+    <div class="card" style="margin-bottom:10px">
+      <span class="clbl">☁️ 云同步（Supabase）</span>
+      <p class="note" style="margin-bottom:10px">
+        同一数据库 URL + Key → 数据实时共享。<br>
+        各自独立 → 各自在 Supabase 建项目填自己的。<br>
+        <strong>需在 Supabase 控制台 → Database → Replication 里开启 app_data 表的监听。</strong>
+      </p>
+      <span class="lbl" style="margin-top:0">Project URL</span>
+      <input class="inp" id="sbUrlIn" placeholder="https://xxxxxx.supabase.co" style="margin-bottom:8px;font-size:12px">
+      <span class="lbl">Anon Key</span>
+      <input class="inp" id="sbKeyIn" placeholder="eyJ..." style="margin-bottom:10px;font-size:12px">
+      <div style="display:flex;gap:7px;margin-bottom:7px">
+        <button class="gbtn g-green" style="font-size:12px;padding:10px" onclick="saveCloudSettings()">🔗 连接</button>
+        <button class="gbtn g-gray" style="font-size:12px;padding:10px" onclick="disconnectCloud()">⛔ 断开</button>
+      </div>
+      <button class="gbtn g-blue" style="font-size:12px;padding:10px;margin-bottom:6px" onclick="manualSync()">🔄 立即同步</button>
+      <div id="cloudStatus" style="font-size:11px;font-weight:700;color:var(--mu)"></div>
+    </div>
+    <div class="card" style="margin-bottom:10px">
+      <span class="clbl">🏷️ 菜谱分类标签</span>
+      <div id="tagMgmt" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+      <div class="add-row">
+        <input class="inp" id="tagIn" placeholder="新增标签" onkeydown="if(event.key==='Enter')addTag()">
+        <button class="add-btn-s" onclick="addTag()">添加</button>
       </div>
     </div>
-    <button class="gbtn g-green" onclick="logExercise()">✓ 记录</button>
+    <button class="gbtn g-green" onclick="saveSettings()">💾 保存设置</button>
   </div>
 </div>
 
-<!-- Toast + Celeb -->
+<!-- Toast -->
 <div class="toast" id="toast"></div>
-<div class="celeb-wrap" id="celebWrap" style="display:none"><div class="celeb-msg" id="celebMsg"></div></div>
 
 <script>
 // ══════════════════════════════════════════════
 //  CONSTANTS
 // ══════════════════════════════════════════════
-const DAYS  = ['一','二','三','四','五','六','日'];
-const WSHORT= ['一','二','三','四','五','六','日'];
-const MTYPES= ['breakfast','lunch','dinner'];
-const MLABELS = { breakfast:'早餐', lunch:'午餐', dinner:'晚餐' };
-const MBADGE  = { breakfast:'b-br', lunch:'b-ln', dinner:'b-dn' };
+const MTYPES  = ['breakfast','lunch','dinner'];
+const MLABELS = {breakfast:'早餐', lunch:'午餐', dinner:'晚餐'};
+const MBADGE  = {breakfast:'b-br', lunch:'b-ln', dinner:'b-dn'};
+const DAYS    = ['日','一','二','三','四','五','六'];
 
-// Tag color palette — cycles for custom tags
 const TAG_PALETTE = [
   {bg:'#d4f4e4',c:'#1a6a48'},{bg:'#ffd6c0',c:'#a04020'},
   {bg:'#e0d4f7',c:'#4a38a0'},{bg:'#fff3b0',c:'#9a6a00'},
   {bg:'#ffd6e8',c:'#903070'},{bg:'#d4e8ff',c:'#2050a0'},
-  {bg:'#f4ddf4',c:'#6a2080'},{bg:'#dff4d4',c:'#2a6010'},
+  {bg:'#dff4d4',c:'#2a6010'},{bg:'#f4ddf4',c:'#6a2080'},
 ];
-function tagStyle(tag) {
-  const i = S.recipeTags.indexOf(tag);
-  const p = TAG_PALETTE[(i < 0 ? 0 : i) % TAG_PALETTE.length];
-  return `background:${p.bg};color:${p.c}`;
-}
+
+const EMOJI_MAP = {
+  '饭':'🍚','粥':'🍵','面':'🍜','包':'🥐','饺':'🥟','汤':'🍲','菜':'🥬','肉':'🥩',
+  '鸡':'🍗','鱼':'🐟','虾':'🍤','蛋':'🥚','豆腐':'🧊','番茄':'🍅','土豆':'🥔',
+  '青椒':'🫑','萝卜':'🥕','玉米':'🌽','豆':'🫘','奶':'🥛','果':'🍎','沙拉':'🥗',
+  '寿司':'🍱','汉堡':'🍔','披萨':'🍕','三明治':'🥪','薯条':'🍟',
+};
 
 const API_HINTS = {
-  siliconflow:'siliconflow.cn 注册 → API密钥，送¥14免费额度，国内直连',
+  siliconflow:'siliconflow.cn 注册，送免费额度，国内直连',
   deepseek:'platform.deepseek.com，国产超低价',
-  groq:'console.groq.com，极速，有免费额度',
+  groq:'console.groq.com，有免费额度',
   gemini:'aistudio.google.com，需翻墙',
   claude:'console.anthropic.com，质量最高',
 };
 const API_CONF = {
-  siliconflow:{ url:'https://api.siliconflow.cn/v1/chat/completions',   model:'Qwen/Qwen2.5-7B-Instruct' },
-  deepseek:   { url:'https://api.deepseek.com/chat/completions',        model:'deepseek-chat' },
-  groq:       { url:'https://api.groq.com/openai/v1/chat/completions',  model:'llama-3.1-8b-instant' },
-  gemini:     { url:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model:'gemini-2.0-flash' },
-  claude:     { url:'https://api.anthropic.com/v1/messages',            model:'claude-haiku-4-5-20251001' },
+  siliconflow:{url:'https://api.siliconflow.cn/v1/chat/completions', model:'Qwen/Qwen2.5-7B-Instruct'},
+  deepseek:   {url:'https://api.deepseek.com/chat/completions',       model:'deepseek-chat'},
+  groq:       {url:'https://api.groq.com/openai/v1/chat/completions', model:'llama-3.1-8b-instant'},
+  gemini:     {url:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model:'gemini-2.0-flash'},
+  claude:     {url:'https://api.anthropic.com/v1/messages', model:'claude-haiku-4-5-20251001'},
 };
-
-const THEMES = [
-  {name:'清新绿',mb:'#3dbf87',md:'#6dd5a8',ml:'#b8f0d8',lb:'#7b6ee8',ld:'#b89ee8',ll:'#e0d4f7',hdr:'135deg,#b8f0d8 0%,#d4eaff 55%,#e8d4f7 100%'},
-  {name:'珊瑚橙',mb:'#f07050',md:'#f09070',ml:'#ffd8c8',lb:'#7b6ee8',ld:'#b89ee8',ll:'#e0d4f7',hdr:'135deg,#ffd4c0 0%,#ffeedd 55%,#e8d4f7 100%'},
-  {name:'薰衣草',mb:'#9060d8',md:'#b088e8',ml:'#e4d8f8',lb:'#e870a0',ld:'#f0a0c8',ll:'#ffd6e8',hdr:'135deg,#e4d8f8 0%,#f0e8ff 55%,#ffd6e8 100%'},
-  {name:'天空蓝',mb:'#4090e0',md:'#70b0f0',ml:'#c8e0f8',lb:'#3dbf87',ld:'#6dd5a8',ll:'#b8f0d8',hdr:'135deg,#c8e0f8 0%,#d8eeff 55%,#b8f0d8 100%'},
-  {name:'玫瑰粉',mb:'#e05090',md:'#f080b0',ml:'#ffd0e4',lb:'#7b6ee8',ld:'#b89ee8',ll:'#e0d4f7',hdr:'135deg,#ffd0e4 0%,#ffe8f0 55%,#e0d4f7 100%'},
-  {name:'抹茶',mb:'#70b040',md:'#90cc60',ml:'#d4eeb8',lb:'#e8a030',ld:'#f0c060',ll:'#fff3b0',hdr:'135deg,#d4eeb8 0%,#eef8d8 55%,#fff3b0 100%'},
-];
 
 // ══════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════
 const DEFAULTS = {
   recipes:     [],
-  ingredients: [], // unified: {name, have, kcal, type}  type='ing'|'fruit'
-  takeouts:    [],
+  ingredients: [],
   plan:        {},
-  checkins:    {},
-  weights:     [],
-  snacks:      {},
-  snackLib:    [],
-  exercises:   {}, // {date: [{type, icon, min, kcal}]}
   recipeTags:  ['主食','主菜','蔬菜','汤品','甜点'],
-  settings: {
-    calories:1400, snackLimit:3,
-    height:0, avoidFood:'', weightGoal:0, age:0, goalAdviceTxt:'',
-    apiKey:'', apiProvider:'siliconflow'
-  }
+  settings:    {apiKey:'', apiProvider:'siliconflow'},
 };
 let S = JSON.parse(JSON.stringify(DEFAULTS));
 
-// ── picker state ──
-let pickDayKey   = '';
-let pickMealType = '';
-let pickSelected = new Set(); // recipe ids
-let pickTagFilter= '全部';
-let pickToKcals  = {}; // takeout name → kcal override
-let rcEditId     = null; // recipe being edited
-let calViewYear, calViewMonthNum;
-let rcTagFilter  = '全部'; // recipe list filter
+let _pickMeal     = '';
+let _pickSelected = new Set();
+let _pickTagFilter= '全部';
+let _rcEditId     = null;
+let _rcIngList    = [];
+let _rcTagFilter  = '全部';
 
 // ══════════════════════════════════════════════
 //  PERSISTENCE
 // ══════════════════════════════════════════════
-const LS_KEY = 'eatwhat_v26';
+const LS_KEY = 'eatwhat_lite_v1';
 
 function save() {
-  // Never sync apiKey to cloud
   localStorage.setItem(LS_KEY, JSON.stringify(S));
   pushToCloud();
 }
@@ -798,137 +416,81 @@ function load() {
     if (raw) {
       const parsed = JSON.parse(raw);
       S = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), parsed);
-      // Migration: ensure recipeTags
-      if (!S.recipeTags || !Array.isArray(S.recipeTags)) S.recipeTags = [...DEFAULTS.recipeTags];
-      // Migration: add type/kcal to old ingredients that lack them
-      S.ingredients = S.ingredients.map(i => ({
-        name: i.name, have: !!i.have,
-        kcal: i.kcal||0,
-        type: i.type || 'ing'
-      }));
-      // Migration: merge old S.fruits array into ingredients (v19 → v20)
-      if (parsed.fruits && Array.isArray(parsed.fruits)) {
-        parsed.fruits.forEach(f => {
-          if (!S.ingredients.find(i => i.name===f.name)) {
-            S.ingredients.push({name:f.name, have:!!f.have, kcal:f.kcal||0, type:'fruit'});
-          }
-        });
-      }
-      // Migration: ensure takeouts have kcal field
-      S.takeouts = S.takeouts.map(t => ({name:t.name, kcal:t.kcal||0}));
-      // Migration: flatten snacks from {date:{member:[]}} → {date:[]} (v24→v25)
-      const flatSnacks = {};
-      Object.keys(S.snacks).forEach(date => {
-        const v = S.snacks[date];
-        if (Array.isArray(v)) { flatSnacks[date] = v; }
-        else if (v && typeof v === 'object') {
-          // merge all members' entries into one array
-          flatSnacks[date] = Object.values(v).flat();
-        }
-      });
-      S.snacks = flatSnacks;
-      // Migration: ensure exercises exists
-      if (!S.exercises || typeof S.exercises !== 'object' || Array.isArray(S.exercises)) S.exercises = {};
-      // Migration: weightGoal string → number
-      if (S.settings.weightGoal && typeof S.settings.weightGoal === 'string') {
-        const wgParsed = parseFloat(S.settings.weightGoal);
-        S.settings.weightGoal = isNaN(wgParsed) ? 0 : wgParsed;
-      }
+      if (!Array.isArray(S.recipeTags)) S.recipeTags = [...DEFAULTS.recipeTags];
+      if (!S.plan || typeof S.plan !== 'object') S.plan = {};
     }
   } catch(e) { console.warn('Load error', e); }
 }
 
-function exportData() {
-  const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `吃什么_${dk(new Date())}.json`;
-  a.click();
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function dk(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 }
-function importData(input) {
-  const f = input.files[0]; if (!f) return;
-  const r = new FileReader();
-  r.onload = e => {
-    try {
-      const d = JSON.parse(e.target.result);
-      if (!d.settings) throw new Error('invalid');
-      S = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), d);
-      save(); renderAll();
-      toast('✅ 数据已导入！');
-    } catch { toast('❌ 文件格式不对'); }
-  };
-  r.readAsText(f);
-  input.value = '';
+
+function tagStyle(tag) {
+  const i = S.recipeTags.indexOf(tag);
+  const p = TAG_PALETTE[(i<0?0:i) % TAG_PALETTE.length];
+  return `background:${p.bg};color:${p.c}`;
 }
 
 // ══════════════════════════════════════════════
-//  CLOUD SYNC (Supabase)
+//  CLOUD SYNC
 // ══════════════════════════════════════════════
-function loadCloudConfig() { try { return JSON.parse(localStorage.getItem('eatwhat_cloud')||'{}'); } catch { return {}; } }
-function saveCloudConfig(url,key) { localStorage.setItem('eatwhat_cloud', JSON.stringify({url,key})); }
-
 let sb = null;
 let _pushing = false, _pendingPush = false;
+let _pollTimer = null;
 
-function setSyncDot(state) {
-  const el = document.getElementById('syncDot');
-  if (el) { el.className=`sync-dot ${state}`; el.title={synced:'已同步',syncing:'同步中…',offline:'离线/未配置'}[state]; }
+function loadCloudConfig() { try { return JSON.parse(localStorage.getItem('eatwhat_lite_cloud')||'{}'); } catch { return {}; } }
+function saveCloudConfig(url,key) { localStorage.setItem('eatwhat_lite_cloud', JSON.stringify({url,key})); }
+
+function setSyncState(state) {
+  const btn = document.getElementById('gearBtn');
+  if (!btn) return;
+  btn.dataset.sync = state;
+  btn.title = {synced:'已同步 · 点击设置', syncing:'同步中…', offline:'未连接 · 点击设置'}[state] || '';
 }
 
 async function initCloud() {
   const {url,key} = loadCloudConfig();
-  if (!url||!key) { setSyncDot('offline'); updateCloudStatus(); return; }
+  if (!url||!key) { setSyncState('offline'); updateCloudStatus(); return; }
   try {
-    sb = supabase.createClient(url, key, { auth: { persistSession: false } });
-    setSyncDot('syncing');
+    sb = supabase.createClient(url, key, {auth:{persistSession:false}});
+    setSyncState('syncing');
     await pullFromCloud();
     subscribeRealtime();
     startPolling();
-    setSyncDot('synced');
+    setSyncState('synced');
     updateCloudStatus();
   } catch(e) {
     console.warn('Cloud init failed:', e.message);
-    sb = null; setSyncDot('offline'); updateCloudStatus();
+    sb = null; setSyncState('offline'); updateCloudStatus();
   }
 }
 
 async function pullFromCloud() {
   if (!sb) return;
   try {
-    const {data, error} = await sb.from('app_settings').select('key,value');
+    const {data, error} = await sb.from('app_data').select('key,value');
     if (error) throw error;
-    const apiKey = S.settings.apiKey;
-    data.forEach(row => {
-      const v = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
-      if (row.key==='recipes')     S.recipes     = v;
-      if (row.key==='ingredients') {
-        S.ingredients = v.map(i=>({name:i.name,have:!!i.have,kcal:i.kcal||0,type:i.type||'ing'}));
-      }
-      if (row.key==='fruits' && Array.isArray(v)) {
-        v.forEach(f => {
-          if (!S.ingredients.find(i=>i.name===f.name))
-            S.ingredients.push({name:f.name,have:!!f.have,kcal:f.kcal||0,type:'fruit'});
-        });
-      }
-      if (row.key==='takeouts')    S.takeouts    = v.map(t=>({name:t.name,kcal:t.kcal||0}));
-      if (row.key==='plan')        S.plan        = v;
-      if (row.key==='checkins')    S.checkins    = v;
-      if (row.key==='weights')     S.weights     = v;
-      if (row.key==='snacks')      S.snacks      = v;
-      if (row.key==='snackLib')    S.snackLib    = v;
-      if (row.key==='recipeTags')  S.recipeTags  = v;
-      if (row.key==='config') {
-        const c = v;
-        if (c.settings) S.settings = Object.assign(S.settings, c.settings);
-      }
+    const {apiKey, apiProvider} = S.settings;
+    (data||[]).forEach(row => {
+      try {
+        const v = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+        if (row.key === 'recipes')     S.recipes     = v;
+        if (row.key === 'ingredients') S.ingredients = v;
+        if (row.key === 'plan')        S.plan        = v;
+        if (row.key === 'recipeTags')  S.recipeTags  = v;
+      } catch{}
     });
     S.settings.apiKey = apiKey;
+    S.settings.apiProvider = apiProvider;
     localStorage.setItem(LS_KEY, JSON.stringify(S));
     renderAll();
-    setSyncDot('synced');
+    setSyncState('synced');
   } catch(e) {
     console.warn('Pull error', e);
-    setSyncDot('offline');
+    setSyncState('offline');
     toast('☁️ 同步拉取失败，请检查网络或数据库连接');
   }
 }
@@ -942,28 +504,20 @@ async function pushToCloud(immediate) {
     return;
   }
   _pushing = true;
-  setSyncDot('syncing');
+  setSyncState('syncing');
   try {
-    const safeSettings = Object.assign({}, S.settings);
-    delete safeSettings.apiKey;
     const rows = [
       {key:'recipes',     value:JSON.stringify(S.recipes)},
       {key:'ingredients', value:JSON.stringify(S.ingredients)},
-      {key:'takeouts',    value:JSON.stringify(S.takeouts)},
       {key:'plan',        value:JSON.stringify(S.plan)},
-      {key:'checkins',    value:JSON.stringify(S.checkins)},
-      {key:'weights',     value:JSON.stringify(S.weights)},
-      {key:'snacks',      value:JSON.stringify(S.snacks)},
-      {key:'snackLib',    value:JSON.stringify(S.snackLib)},
       {key:'recipeTags',  value:JSON.stringify(S.recipeTags)},
-      {key:'config', value:JSON.stringify({settings:safeSettings})},
     ];
-    const {error} = await sb.from('app_settings').upsert(rows, {onConflict:'key'});
+    const {error} = await sb.from('app_data').upsert(rows, {onConflict:'key'});
     if (error) throw error;
-    setSyncDot('synced');
+    setSyncState('synced');
   } catch(e) {
     console.warn('Push error', e);
-    setSyncDot('offline');
+    setSyncState('offline');
     toast('☁️ 同步上传失败，请检查网络或数据库连接');
   } finally {
     _pushing = false;
@@ -972,19 +526,16 @@ async function pushToCloud(immediate) {
 }
 
 let _realtimeSub = null;
-let _pollTimer = null;
-
 function subscribeRealtime() {
   if (_realtimeSub) { try { _realtimeSub.unsubscribe(); } catch{} }
-  _realtimeSub = sb.channel('app_settings_changes')
-    .on('postgres_changes', {event:'*', schema:'public', table:'app_settings'}, () => {
+  _realtimeSub = sb.channel('app_data_changes')
+    .on('postgres_changes', {event:'*', schema:'public', table:'app_data'}, () => {
       clearTimeout(subscribeRealtime._t);
       subscribeRealtime._t = setTimeout(pullFromCloud, 2000);
     })
     .subscribe();
 }
 
-// Fallback polling every 30s in case Realtime is not enabled on the database
 function startPolling() {
   stopPolling();
   _pollTimer = setInterval(() => { if (sb) pullFromCloud(); }, 30000);
@@ -993,14 +544,13 @@ function stopPolling() {
   if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; }
 }
 
-// Pull on tab/app becoming visible (covers switching back from another app)
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && sb) pullFromCloud();
 });
 
 async function manualSync() {
   if (!sb) { toast('未连接数据库，请先配置云同步'); return; }
-  setSyncDot('syncing');
+  setSyncState('syncing');
   await pushToCloud(true);
   await pullFromCloud();
   toast('🔄 同步完成');
@@ -1010,81 +560,38 @@ async function saveCloudSettings() {
   const url = document.getElementById('sbUrlIn').value.trim();
   const key = document.getElementById('sbKeyIn').value.trim();
   if (!url||!key) { toast('请填写 URL 和 Key'); return; }
-  if (!url.startsWith('https://')||!url.includes('supabase')) { toast('URL格式不对'); return; }
+  if (!url.startsWith('https://')) { toast('URL 格式不对'); return; }
   saveCloudConfig(url, key);
   updateCloudStatus('connecting');
-  sb = null;
+  sb = null; stopPolling();
   await initCloud();
 }
+
 function disconnectCloud() {
   if (!confirm('断开后数据仅存本设备，确定吗？')) return;
-  localStorage.removeItem('eatwhat_cloud');
-  sb = null; setSyncDot('offline'); stopPolling();
+  localStorage.removeItem('eatwhat_lite_cloud');
+  if (_realtimeSub) { try { _realtimeSub.unsubscribe(); } catch{} _realtimeSub = null; }
+  sb = null; stopPolling(); setSyncState('offline');
   document.getElementById('sbUrlIn').value = '';
   document.getElementById('sbKeyIn').value = '';
-  updateCloudStatus(); toast('⛔ 已断开云同步');
+  updateCloudStatus();
+  toast('⛔ 已断开云同步');
 }
+
 function updateCloudStatus(state) {
   const el = document.getElementById('cloudStatus'); if (!el) return;
   const {url} = loadCloudConfig();
-  if (state==='connecting') { el.textContent='⏳ 正在连接…'; el.style.color='var(--lb)'; return; }
+  if (state==='connecting') { el.textContent='⏳ 正在连接…'; el.style.color='var(--pu)'; return; }
   if (!url) { el.textContent='未配置 — 数据仅存本设备'; el.style.color='var(--mu)'; return; }
-  if (sb) { el.innerHTML=`✅ 已连接：<span style="color:var(--mu)">${url}</span>`; el.style.color='#1a7a48'; }
+  if (sb) { el.innerHTML=`✅ 已连接 <span style="color:var(--mu);font-weight:600">${url}</span>`; el.style.color='#1a7a48'; }
   else    { el.textContent='❌ 连接失败，请检查 URL 和 Key'; el.style.color='#e05050'; }
 }
 
 // ══════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════
-function dk(date) {
-  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-}
-
-let currentDayOffset = 0;
-let currentWeekOffset = 0; // 0 = this week, -1 = last week, +1 = next week, unlimited
-
-function getWeekStart() {
-  const today = new Date();
-  const dow = today.getDay();
-  const diff = (dow === 0 ? -6 : 1 - dow);
-  const ws = new Date(today);
-  ws.setDate(today.getDate() + diff + currentWeekOffset * 7);
-  ws.setHours(0,0,0,0);
-  return ws;
-}
-function getDayKey(offset) {
-  const ws = getWeekStart();
-  const d = new Date(ws); d.setDate(ws.getDate() + offset);
-  return dk(d);
-}
-
-function initCalView() {
-  const now = new Date();
-  calViewYear = now.getFullYear();
-  calViewMonthNum = now.getMonth();
-}
-
-function renderAll() {
-  renderWeekDots();
-  renderDay();
-  updateStreak();
-  if (document.getElementById('page-data').classList.contains('active')) {
-    renderCalendar(); renderWeightLog(); updateBMI();
-  }
-  renderIng();
-  renderRecipeList();
-  renderSnack();
-  loadSettingsUI();
-}
-
 window.addEventListener('DOMContentLoaded', () => {
   load();
-  initCalView();
-  buildThemeGrid();
-  // Default to today's weekday (Mon=0 … Sun=6)
-  const dow = new Date().getDay();
-  currentDayOffset = dow === 0 ? 6 : dow - 1;
-  document.getElementById('wtDate').value = dk(new Date());
   renderAll();
   initCloud();
   document.querySelectorAll('.overlay').forEach(m =>
@@ -1092,1325 +599,498 @@ window.addEventListener('DOMContentLoaded', () => {
   );
 });
 
+function renderAll() {
+  refreshRcTagBar();
+  renderRecipeList();
+  renderIngList();
+  renderToday();
+}
+
 // ══════════════════════════════════════════════
 //  TABS
 // ══════════════════════════════════════════════
 function switchTab(name, el) {
-  // Auto-save basic profile fields when leaving settings
-  if (document.getElementById('page-settings').classList.contains('active')) {
-    const h = parseFloat(document.getElementById('heightIn').value) || 0;
-    const a = parseInt(document.getElementById('ageIn').value) || 0;
-    const g = parseFloat(document.getElementById('goalIn').value) || 0;
-    const av = document.getElementById('avoidIn').value;
-    if (h !== S.settings.height || a !== S.settings.age || g !== S.settings.weightGoal || av !== S.settings.avoidFood) {
-      S.settings.height = h;
-      S.settings.age = a;
-      S.settings.weightGoal = g;
-      S.settings.avoidFood = av;
-      save();
-    }
-  }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   el.classList.add('active');
-  if (name==='data') { renderCalendar(); renderWeightLog(); updateBMI(); }
-  if (name==='food') { renderTagMgmt(); renderRcFilter(); renderRecipeList(); }
-  if (name==='snack') { renderSnack(); }
-  if (name==='settings') { loadSettingsUI(); }
+  if (name==='today') renderToday();
 }
-function switchFood(name, el) {
-  document.getElementById('fsub-ing').style.display = name==='ing' ? '' : 'none';
-  document.getElementById('fsub-recipe').style.display = name==='recipe' ? '' : 'none';
-  document.querySelectorAll('.stab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  if (name==='recipe') { renderTagMgmt(); renderRcFilter(); renderRecipeList(); }
-  if (name==='ing')    { renderIng(); }
-}
-
-// ══════════════════════════════════════════════
-//  PLAN PAGE
-// ══════════════════════════════════════════════
-function renderWeekDots() {
-  const c = document.getElementById('wdots'); c.innerHTML='';
-
-  // Week nav — year label (subtle, only when needed) + date row (nowrap, always stable)
-  const ws = getWeekStart();
-  const we = new Date(ws); we.setDate(ws.getDate() + 6);
-  const thisYear = new Date().getFullYear();
-  const wy = ws.getFullYear(), ey = we.getFullYear();
-  const crossYear = wy !== ey;
-  const needYear = crossYear || wy !== thisYear;
-  // Year label: "2025年" / "2025年–2026年" / hidden
-  const yearLbl = !needYear ? '' :
-    crossYear ? `${wy}年–${ey}年` : `${wy}年`;
-  // Date range: always month+day only, never breaks layout
-  const fmt = d => `${d.getMonth()+1}月${d.getDate()}日`;
-  const dateRange = `${fmt(ws)} – ${fmt(we)}`;
-
-  // Row 1: year label centered (only when needed)
-  if (yearLbl) {
-    const yr = document.createElement('div');
-    yr.style.cssText = 'text-align:center;width:100%;font-size:9px;font-weight:700;color:var(--mu);letter-spacing:.3px;margin-bottom:3px';
-    yr.textContent = yearLbl;
-    c.appendChild(yr);
-  }
-
-  // Row 2: « date range »
-  const nav = document.createElement('div');
-  nav.style.cssText = 'display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:7px;gap:4px';
-  nav.innerHTML = `
-    <button class="nbtn" onclick="changeWeek(-1)" style="flex-shrink:0">«</button>
-    <span style="flex:1;text-align:center;font-size:11px;font-weight:800;color:var(--tx);white-space:nowrap">${dateRange}</span>
-    <button class="nbtn" onclick="changeWeek(1)" style="flex-shrink:0">»</button>`;
-  c.appendChild(nav);
-
-  // Day dots row
-  const dots = document.createElement('div');
-  dots.style.cssText = 'display:flex;justify-content:center;gap:5px;width:100%';
-  for (let i=0; i<7; i++) {
-    const dayKey = getDayKey(i);
-    const hasPlan = S.plan[dayKey] && MTYPES.some(t => (S.plan[dayKey][t]||[]).length > 0);
-    const div = document.createElement('div');
-    div.className = 'wdot' + (i===currentDayOffset ? ' cur' : hasPlan ? ' has' : '');
-    div.textContent = DAYS[i];
-    div.onclick = () => { currentDayOffset=i; renderWeekDots(); renderDay(); };
-    dots.appendChild(div);
-  }
-  c.appendChild(dots);
-}
-
-function renderDay() {
-  const dayKey = getDayKey(currentDayOffset);
-  const ws = getWeekStart();
-  const d  = new Date(ws); d.setDate(ws.getDate() + currentDayOffset);
-  const isThisWeek = currentWeekOffset === 0;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const isToday = dk(d) === dk(today);
-  const dayLabel = isToday ? '今天' : `周${DAYS[currentDayOffset]}`;
-  document.getElementById('dname').textContent = dayLabel;
-  document.getElementById('ddate').textContent = `${d.getMonth()+1}月${d.getDate()}日`;
-
-  const plan = S.plan[dayKey] || {};
-  const totalKcal = MTYPES.reduce((s,mt) => s + (plan[mt]||[]).reduce((a,d)=>a+(d.kcal||0),0), 0);
-  const goal = S.settings.calories;
-  document.getElementById('dkcal').textContent = totalKcal ? `${totalKcal} kcal` : '— kcal';
-  document.getElementById('goalEl').textContent = `${goal} kcal`;
-  const pct = Math.min(100, Math.round(totalKcal/goal*100));
-  document.getElementById('pbar').style.width = pct+'%';
-  document.getElementById('pbar').style.background = totalKcal > goal ? 'var(--pb)' : 'var(--mb)';
-  const diff = totalKcal - goal;
-  const stEl = document.getElementById('kcalSt');
-  if (!totalKcal) { stEl.textContent='—'; stEl.style.color='var(--mu)'; }
-  else if (diff > 0) { stEl.textContent=`⚠️ 超出 ${diff} kcal`; stEl.style.color='var(--pb)'; }
-  else { stEl.textContent=`✅ 还差 ${Math.abs(diff)} kcal`; stEl.style.color='var(--mb)'; }
-
-  // Render meal cards
-  const area = document.getElementById('mealsArea'); area.innerHTML='';
-  MTYPES.forEach(mt => {
-    const dishes = plan[mt] || [];
-    const eaten  = (S.checkins[dayKey]||{})[mt] || false;
-    const mkcal  = dishes.reduce((s,d)=>s+(d.kcal||0),0);
-    const mc = document.createElement('div'); mc.className='mc';
-
-    // Header
-    const hdr = document.createElement('div'); hdr.className='mc-hdr';
-    hdr.innerHTML = `<span class="mc-badge ${MBADGE[mt]}">${MLABELS[mt]}</span>
-      ${mkcal ? `<span class="mc-kcal">${mkcal} kcal</span>` : ''}
-      <button class="mc-del" onclick="clearMeal('${dayKey}','${mt}')">✕ 清空</button>`;
-    mc.appendChild(hdr);
-
-    // Dishes
-    if (dishes.length === 0) {
-      const emp = document.createElement('div'); emp.className='mc-empty';
-      emp.innerHTML = '<span style="font-size:20px">🍽️</span><span>还没有安排，点下方添加菜品</span>';
-      mc.appendChild(emp);
-    } else {
-      dishes.forEach((dish, idx) => {
-        const row = document.createElement('div'); row.className='mc-dish';
-        const tags = (dish.tags||[]).map(t=>`<span class="rtag" style="${tagStyle(t)}">${t}</span>`).join('');
-        row.innerHTML = `
-          <div class="mc-dish-emoji">${dish.emoji||'🍽️'}</div>
-          <div class="mc-dish-main">
-            <div class="mc-dish-name">${dish.name}</div>
-            <div class="mc-dish-meta">${dish.kcal ? dish.kcal+' kcal' : ''}${dish.kcal&&tags?' · ':''}${tags}</div>
-          </div>
-          <button class="mc-dish-del" onclick="deleteDish('${dayKey}','${mt}',${idx})">✕</button>`;
-        mc.appendChild(row);
-      });
-    }
-
-    // Footer
-    const foot = document.createElement('div'); foot.className='mc-foot';
-    foot.innerHTML = `
-      <button class="mc-add-btn" onclick="openPickDish('${dayKey}','${mt}')">＋ 添加菜品</button>
-      <button class="btn-eat${eaten?' done':''}" onclick="checkin('${dayKey}','${mt}',this)">
-        ${eaten ? '💚 享用了' : '♡ 享用了'}
-      </button>`;
-    mc.appendChild(foot);
-    area.appendChild(mc);
-  });
-}
-
-function clearMeal(dayKey, mt) {
-  if (!S.plan[dayKey]) return;
-  delete S.plan[dayKey][mt];
-  if (MTYPES.every(t=>!(S.plan[dayKey][t]||[]).length)) delete S.plan[dayKey];
-  if (S.checkins[dayKey]) delete S.checkins[dayKey][mt];
-  save(); renderDay(); renderWeekDots(); updateStreak();
-}
-
-function deleteDish(dayKey, mt, idx) {
-  if (!S.plan[dayKey]?.[mt]) return;
-  S.plan[dayKey][mt].splice(idx, 1);
-  if (!S.plan[dayKey][mt].length) {
-    delete S.plan[dayKey][mt];
-    if (MTYPES.every(t=>!(S.plan[dayKey]?.[t]||[]).length)) delete S.plan[dayKey];
-  }
-  save(); renderDay(); renderWeekDots(); updateStreak();
-}
-
-function checkin(dayKey, mt, btn) {
-  if (!S.checkins[dayKey]) S.checkins[dayKey]={};
-  const wasEaten = S.checkins[dayKey][mt];
-  S.checkins[dayKey][mt] = !wasEaten;
-  save(); renderDay(); renderWeekDots(); updateStreak();
-  if (!wasEaten) burstConfetti(btn);
-}
-
-function updateStreak() {
-  const now = new Date();
-  const yr = now.getFullYear(), mo = now.getMonth();
-  let count = 0;
-  for (let d=1; d<=now.getDate(); d++) {
-    const key = `${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    if (S.checkins[key] && MTYPES.some(t=>S.checkins[key][t])) count++;
-  }
-  document.getElementById('streakEl').textContent = `📅 本月打卡 ${count} 天`;
-}
-
-function changeDay(d) {
-  const next = currentDayOffset + d;
-  if (next < 0) {
-    currentWeekOffset--;
-    currentDayOffset = 6;
-  } else if (next > 6) {
-    currentWeekOffset++;
-    currentDayOffset = 0;
-  } else {
-    currentDayOffset = next;
-  }
-  renderWeekDots(); renderDay();
-}
-
-function changeWeek(d) {
-  currentWeekOffset += d;
-  renderWeekDots(); renderDay();
-}
-
-// ══════════════════════════════════════════════
-//  PICK DISH MODAL
-// ══════════════════════════════════════════════
-function openPickDish(dayKey, mealType) {
-  pickDayKey    = dayKey;
-  pickMealType  = mealType;
-  pickSelected  = new Set();
-  pickToSelected= new Set();
-  pickToKcals   = {};
-  pickTagFilter = '全部';
-  document.getElementById('pickDishTitle').textContent = `${MLABELS[mealType]} · 添加菜品`;
-  document.getElementById('pickSearch').value       = '';
-  document.getElementById('customDishName').value   = '';
-  document.getElementById('customDishKcal').value   = '';
-  document.getElementById('customToName').value     = '';
-  document.getElementById('customToKcal').value     = '';
-  renderPickTagBar();
-  renderPickList();
-  showModal('pickDishModal');
-}
-
-function renderPickTagBar() {
-  const bar = document.getElementById('pickTagBar'); bar.innerHTML='';
-  // '全部' + recipe tags + '🛵 外卖' (always last)
-  const tags = ['全部', ...S.recipeTags, '🛵 外卖'];
-  tags.forEach(t => {
-    const btn = document.createElement('button');
-    btn.className = 'ptag' + (t===pickTagFilter ? ' active' : '');
-    btn.textContent = t;
-    btn.onclick = () => { pickTagFilter=t; renderPickTagBar(); renderPickList(); };
-    bar.appendChild(btn);
-  });
-}
-
-function renderPickList() {
-  const isTO = pickTagFilter === '🛵 外卖';
-  document.getElementById('pickSearch').style.display      = isTO ? 'none' : '';
-  document.getElementById('pickList').style.display        = isTO ? 'none' : '';
-  document.getElementById('pickToSection').style.display   = isTO ? '' : 'none';
-  document.getElementById('pickCustomArea').style.display  = isTO ? 'none' : '';
-
-  if (isTO) { renderPickToList(); updatePickBtn(); return; }
-
-  const q = (document.getElementById('pickSearch').value||'').toLowerCase();
-  const list = document.getElementById('pickList'); list.innerHTML='';
-
-  const filtered = S.recipes.filter(r => {
-    const tagMatch = pickTagFilter==='全部' || (r.tags||[]).includes(pickTagFilter);
-    const searchMatch = !q || r.name.toLowerCase().includes(q);
-    return tagMatch && searchMatch;
-  });
-
-  if (!filtered.length) {
-    list.innerHTML = '<div class="empty"><span class="e">📖</span>没有找到菜谱，请先在食材页面添加</div>';
-    updatePickBtn(); return;
-  }
-
-  filtered.forEach(r => {
-    const {status, missing} = recipeAvail(r);
-    const isSelected = pickSelected.has(r.id);
-    const tags = (r.tags||[]).map(t=>`<span class="rtag" style="${tagStyle(t)}">${t}</span>`).join(' ');
-    const availBadge = status==='ok'
-      ? '<span class="avail-ok">✅ 可做</span>'
-      : status==='part'
-        ? `<span class="avail-part">⚠️ 部分</span>`
-        : `<span class="avail-no">❌ 缺料</span>`;
-    const missingHtml = missing.length
-      ? `<div class="rc-missing">缺：${missing.join('、')}</div>` : '';
-    const div = document.createElement('div');
-    div.className = 'pick-recipe' + (isSelected ? ' sel' : '');
-    div.innerHTML = `
-      <div class="pick-recipe-check">${isSelected?'✓':''}</div>
-      <div class="pick-recipe-emoji">${r.emoji||'🍽️'}</div>
-      <div class="pick-recipe-info">
-        <div class="pick-recipe-name">${r.name}</div>
-        <div class="pick-recipe-meta">
-          ${r.kcal ? r.kcal+' kcal' : '热量未知'}
-          ${tags ? ' · '+tags : ''}
-          ${availBadge}
-        </div>
-        ${missingHtml}
-      </div>`;
-    div.onclick = () => {
-      if (pickSelected.has(r.id)) pickSelected.delete(r.id);
-      else pickSelected.add(r.id);
-      renderPickList();
-    };
-    list.appendChild(div);
-  });
-  updatePickBtn();
-}
-
-// Render takeout items in picker
-let pickToSelected = new Set(); // takeout names selected
-function renderPickToList() {
-  const c = document.getElementById('pickToList'); c.innerHTML='';
-  if (!S.takeouts.length) {
-    c.innerHTML='<div class="empty"><span class="e">🛵</span>外卖库为空，请先在食材页面添加外卖选项，或使用下方自定义</div>';
-    return;
-  }
-  S.takeouts.forEach(to => {
-    const isSel = pickToSelected.has(to.name);
-    // Pre-fill from library kcal if not yet overridden
-    if (isSel && pickToKcals[to.name] === undefined && to.kcal)
-      pickToKcals[to.name] = to.kcal;
-    const storedKcal = pickToKcals[to.name] || '';
-    const div = document.createElement('div');
-    div.className = 'pick-to-item' + (isSel ? ' sel' : '');
-    div.innerHTML = `
-      <div class="pick-recipe-check">${isSel?'✓':''}</div>
-      <div style="font-size:20px;flex-shrink:0">🛵</div>
-      <div class="pick-recipe-info">
-        <div class="pick-recipe-name">${to.name}</div>
-        ${isSel ? `<div class="to-kcal-row" onclick="event.stopPropagation()">
-          <input class="inp" style="flex:1;font-size:12px;padding:5px 8px" type="number" placeholder="热量 kcal"
-            value="${storedKcal}" oninput="pickToKcals['${to.name}']=parseInt(this.value)||0;updatePickBtn()">
-          <button class="ai-btn" style="padding:5px 9px;font-size:10px" onclick="aiEstimateTOItem('${to.name}',this);event.stopPropagation()">AI估算</button>
-        </div>` : '<div style="font-size:10px;color:var(--mu);font-weight:700">点击选择，可输入热量</div>'}
-      </div>`;
-    div.onclick = () => {
-      if (pickToSelected.has(to.name)) pickToSelected.delete(to.name);
-      else pickToSelected.add(to.name);
-      renderPickToList(); updatePickBtn();
-    };
-    c.appendChild(div);
-  });
-  updatePickBtn();
-}
-
-function updatePickBtn() {
-  const btn = document.getElementById('pickConfirmBtn');
-  const isTO = pickTagFilter === '🛵 外卖';
-  const nRecipe = pickSelected.size;
-  const nTO     = pickToSelected.size;
-  const customName = isTO
-    ? document.getElementById('customToName').value.trim()
-    : document.getElementById('customDishName').value.trim();
-  const total = nRecipe + nTO + (customName ? 1 : 0);
-  btn.textContent = total ? `✓ 确认添加 (${total} 道)` : '✓ 确认添加';
-}
-
-function confirmPick() {
-  if (!S.plan[pickDayKey]) S.plan[pickDayKey] = {};
-  if (!S.plan[pickDayKey][pickMealType]) S.plan[pickDayKey][pickMealType] = [];
-
-  let added = 0;
-  // Add selected recipes
-  pickSelected.forEach(id => {
-    const r = S.recipes.find(x=>x.id===id); if (!r) return;
-    S.plan[pickDayKey][pickMealType].push({
-      id:r.id, name:r.name, emoji:r.emoji||'🍽️', kcal:r.kcal||0, tags:r.tags||[]
-    });
-    added++;
-  });
-
-  // Add selected takeouts
-  pickToSelected.forEach(name => {
-    S.plan[pickDayKey][pickMealType].push({
-      id:null, name, emoji:'🛵', kcal:pickToKcals[name]||0, tags:['外卖'], isTakeout:true
-    });
-    added++;
-  });
-
-  // Add custom dish or custom takeout
-  const isTO = pickTagFilter === '🛵 外卖';
-  const customName = isTO
-    ? document.getElementById('customToName').value.trim()
-    : document.getElementById('customDishName').value.trim();
-  const customKcal = isTO
-    ? parseInt(document.getElementById('customToKcal').value)||0
-    : parseInt(document.getElementById('customDishKcal').value)||0;
-  if (customName) {
-    S.plan[pickDayKey][pickMealType].push({
-      id:null, name:customName, emoji: isTO ? '🛵' : '🍽️',
-      kcal:customKcal, tags: isTO ? ['外卖'] : [], isTakeout: isTO
-    });
-    added++;
-  }
-
-  if (!added) { toast('请先选择菜品'); return; }
-  save(); hideModal('pickDishModal'); renderDay(); renderWeekDots(); updateStreak();
-  toast(`✅ 已添加 ${added} 道菜`);
-}
-
-function aiEstimateCustom() {
-  const name = document.getElementById('customDishName').value.trim();
-  if (!name) { toast('请先填写菜品名称'); return; }
-  aiEstimateKcal(name, [], kcal => {
-    document.getElementById('customDishKcal').value = kcal; updatePickBtn();
-  }, document.getElementById('customAiBtn'));
-}
-
-function aiEstimateTO() {
-  const name = document.getElementById('customToName').value.trim();
-  if (!name) { toast('请先填写外卖名称'); return; }
-  aiEstimateKcal(name, [], kcal => {
-    document.getElementById('customToKcal').value = kcal; updatePickBtn();
-  }, document.getElementById('toAiBtn'));
-}
-
-function aiEstimateTOItem(name, btn) {
-  aiEstimateKcal(name, [], kcal => {
-    pickToKcals[name] = kcal;
-    renderPickToList();
-  }, btn);
-}
-
-// ══════════════════════════════════════════════
-//  RECIPE FUNCTIONS
-// ══════════════════════════════════════════════
-function recipeAvail(r) {
-  const ings = r.ings || [];
-  if (!ings.length) return { status:'ok', missing:[] };
-  const haveNames = new Set(S.ingredients.filter(i=>i.have).map(i=>i.name));
-  const missing = ings.filter(i => !haveNames.has(i));
-  if (missing.length === 0) return { status:'ok', missing:[] };
-  if (missing.length < ings.length) return { status:'part', missing };
-  return { status:'no', missing };
-}
-
-function renderTagMgmt() {
-  const c = document.getElementById('tagMgmt'); if (!c) return;
-  c.innerHTML = '';
-  S.recipeTags.forEach((t, i) => {
-    const sp = document.createElement('span');
-    sp.className = 'tag-mgmt-chip';
-    sp.style.cssText = tagStyle(t)+';border-color:'+TAG_PALETTE[i%TAG_PALETTE.length].c+'40';
-    sp.innerHTML = `${t}<button class="tag-mgmt-del" onclick="delRecipeTag(${i})" title="删除">✕</button>`;
-    c.appendChild(sp);
-  });
-}
-
-function addRecipeTag() {
-  const el = document.getElementById('tagIn');
-  const v = el.value.trim();
-  if (!v) return;
-  if (S.recipeTags.includes(v)) { toast('已有该标签'); return; }
-  S.recipeTags.push(v);
-  el.value = '';
-  save(); renderTagMgmt(); renderRcFilter();
-  toast(`✅ 已添加标签「${v}」`);
-}
-
-function delRecipeTag(i) {
-  const tag = S.recipeTags[i];
-  if (!confirm(`删除标签「${tag}」？菜谱中该标签也会被移除。`)) return;
-  S.recipeTags.splice(i, 1);
-  S.recipes.forEach(r => { if (r.tags) r.tags = r.tags.filter(t=>t!==tag); });
-  save(); renderTagMgmt(); renderRcFilter(); renderRecipeList();
-}
-
-function renderRcFilter() {
-  const bar = document.getElementById('rcFilter'); if (!bar) return;
-  bar.innerHTML = '';
-  ['全部', ...S.recipeTags].forEach(t => {
-    const btn = document.createElement('button');
-    btn.className = 'rftag' + (t===rcTagFilter ? ' active' : '');
-    btn.textContent = t;
-    btn.onclick = () => { rcTagFilter=t; renderRcFilter(); renderRecipeList(); };
-    bar.appendChild(btn);
-  });
-}
-
-function renderRecipeList() {
-  const c = document.getElementById('recipeList'); if (!c) return;
-  const filtered = rcTagFilter==='全部'
-    ? S.recipes
-    : S.recipes.filter(r=>(r.tags||[]).includes(rcTagFilter));
-  if (!filtered.length) {
-    c.innerHTML = '<div class="empty"><span class="e">📖</span>还没有菜谱，点上方「添加菜谱」开始吧！</div>';
-    return;
-  }
-  c.innerHTML = '';
-  filtered.forEach(r => {
-    const {status, missing} = recipeAvail(r);
-    const tags = (r.tags||[]).map(t=>`<span class="rtag" style="${tagStyle(t)}">${t}</span>`).join(' ');
-    const div = document.createElement('div'); div.className='rc';
-    const availBadge = status==='ok'
-      ? '<span class="avail-ok">✅ 可做</span>'
-      : status==='part'
-        ? `<span class="avail-part">⚠️ 部分</span>`
-        : `<span class="avail-no">❌ 缺料</span>`;
-    const missingHtml = missing.length
-      ? `<div class="rc-missing">缺：${missing.join('、')}</div>` : '';
-    div.innerHTML = `
-      <div class="rc-hdr">
-        <div class="rc-emoji">${r.emoji||'🍽️'}</div>
-        <div style="flex:1;min-width:0">
-          <div class="rc-name">${r.name}</div>
-          <div class="rc-meta">
-            ${r.kcal?`<span class="rtag" style="background:var(--yl);color:#9a6a00">${r.kcal} kcal</span>`:''}
-            ${tags}
-            <span style="margin-left:auto">${availBadge}</span>
-          </div>
-          ${missingHtml}
-          ${r.ings&&r.ings.length ? `<div class="rc-ings">🧺 ${r.ings.join('、')}</div>` : ''}
-          ${r.note ? `<div style="font-size:11px;color:var(--mu);margin-top:3px">📝 ${r.note}</div>` : ''}
-        </div>
-      </div>
-      <div class="rc-acts">
-        <button class="rbtn" onclick="showRecipeModal('${r.id}')">✏️ 编辑</button>
-        <button class="rbtn red" onclick="deleteRecipe('${r.id}')">🗑️ 删除</button>
-      </div>`;
-    c.appendChild(div);
-  });
-}
-
-function showRecipeModal(id) {
-  rcEditId = id;
-  const r = id ? S.recipes.find(x=>x.id===id) : null;
-  document.getElementById('recipeMTitle').textContent = r ? '编辑菜谱' : '添加菜谱';
-  document.getElementById('rcName').value  = r?.name  || '';
-  document.getElementById('rcEmoji').value = r?.emoji || '';
-  document.getElementById('rcEmoji').dataset.userSet = r ? '1' : '0'; // editing existing = treat as user-set
-  document.getElementById('rcKcal').value  = r?.kcal  || '';
-  document.getElementById('rcNote').value  = r?.note  || '';
-  // Populate ingredient datalist (all ing+fruit names)
-  const dl = document.getElementById('rcIngDatalist');
-  if (dl) {
-    dl.innerHTML = '';
-    S.ingredients.forEach(i => {
-      const opt = document.createElement('option'); opt.value = i.name; dl.appendChild(opt);
-    });
-  }
-  // Tags
-  const tagSel = document.getElementById('rcTagSel'); tagSel.innerHTML='';
-  S.recipeTags.forEach(t => {
-    const btn = document.createElement('button');
-    btn.className = 'topt' + ((r?.tags||[]).includes(t) ? ' sel' : '');
-    btn.textContent = t;
-    btn.style.cssText = (r?.tags||[]).includes(t) ? tagStyle(t) : '';
-    btn.onclick = () => {
-      btn.classList.toggle('sel');
-      btn.style.cssText = btn.classList.contains('sel') ? tagStyle(t) : '';
-    };
-    tagSel.appendChild(btn);
-  });
-  // Ingredients
-  renderRcIngSel(r?.ings||[]);
-  showModal('recipeModal');
-}
-
-let rcIngList = [];
-function renderRcIngSel(ings) {
-  rcIngList = [...ings];
-  const c = document.getElementById('rcIngSel'); c.innerHTML='';
-  rcIngList.forEach((ing, i) => {
-    const sp = document.createElement('span');
-    sp.className='chip ch-ing-on';
-    sp.innerHTML=`${ing} <button class="chip-x" onclick="removeRcIng(${i})">✕</button>`;
-    c.appendChild(sp);
-  });
-}
-function addRcIng() {
-  const el = document.getElementById('rcIngAdd');
-  const raw = el.value.trim(); if (!raw) return;
-  // Split on Chinese/English commas and spaces, add each non-empty segment
-  raw.split(/[,，\s]+/).map(s=>s.trim()).filter(Boolean).forEach(v => {
-    if (!rcIngList.includes(v)) rcIngList.push(v);
-  });
-  el.value='';
-  renderRcIngSel(rcIngList);
-}
-function removeRcIng(i) { rcIngList.splice(i,1); renderRcIngSel(rcIngList); }
-
-// ── Emoji auto-suggest ──
-const EMOJI_MAP = [
-  [/鱼|三文鱼|鲈鱼|草鱼|鲫鱼|金枪鱼|鳕鱼|带鱼/,'🐟'],
-  [/虾|基围虾|虾仁/,'🍤'],
-  [/蟹|螃蟹/,'🦀'],
-  [/猪|排骨|猪肉|猪蹄|红烧肉|回锅肉/,'🥩'],
-  [/牛|牛肉|牛排|牛腩/,'🥩'],
-  [/鸡|鸡肉|鸡腿|鸡翅|宫保鸡|白切鸡/,'🍗'],
-  [/蛋|鸡蛋|蛋炒|炒蛋|蒸蛋|荷包蛋/,'🍳'],
-  [/面|拉面|意面|炒面|乌冬|面条/,'🍜'],
-  [/米|炒饭|米饭|饭/,'🍚'],
-  [/包|饺|馒|粉|饼|馄饨/,'🥟'],
-  [/寿司|日料/,'🍱'],
-  [/汤|羹|火锅|炖/,'🍲'],
-  [/沙拉|生菜|蔬菜|凉拌/,'🥗'],
-  [/番茄|西红柿/,'🍅'],
-  [/玉米/,'🌽'],
-  [/蘑菇|菌|木耳/,'🍄'],
-  [/豆腐|豆/,'🫘'],
-  [/披萨|比萨/,'🍕'],
-  [/汉堡/,'🍔'],
-  [/薯条|薯片/,'🍟'],
-  [/粥|稀饭/,'🥣'],
-  [/甜点|蛋糕|饼干|糕点/,'🍰'],
-  [/冰淇淋|冰激凌/,'🍦'],
-  [/奶茶|咖啡|饮料/,'🧋'],
-];
-function autoEmoji(name) {
-  const emojiEl = document.getElementById('rcEmoji');
-  if (emojiEl.dataset.userSet === '1') return; // user manually changed it
-  if (!name.trim()) { emojiEl.value=''; return; }
-  for (const [re, em] of EMOJI_MAP) {
-    if (re.test(name)) { emojiEl.value = em; return; }
-  }
-  emojiEl.value = '🍽️';
-}
-
-function saveRecipe() {
-  const name = document.getElementById('rcName').value.trim();
-  if (!name) { toast('请填写菜名'); return; }
-  const tags = [...document.querySelectorAll('#rcTagSel .topt.sel')].map(b=>b.textContent);
-  const recipe = {
-    id:     rcEditId || ('r' + Date.now()),
-    name,
-    emoji:  document.getElementById('rcEmoji').value.trim() || '🍽️',
-    kcal:   parseInt(document.getElementById('rcKcal').value) || 0,
-    tags,
-    ings:   [...rcIngList],
-    note:   document.getElementById('rcNote').value.trim(),
-  };
-  if (rcEditId) {
-    const idx = S.recipes.findIndex(r=>r.id===rcEditId);
-    if (idx>=0) S.recipes[idx]=recipe;
-    // Update any planned dishes referencing this recipe
-    Object.keys(S.plan).forEach(dk => {
-      MTYPES.forEach(mt => {
-        if (S.plan[dk][mt]) S.plan[dk][mt] = S.plan[dk][mt].map(d =>
-          d.id===rcEditId ? {...d, name:recipe.name, emoji:recipe.emoji, kcal:recipe.kcal, tags:recipe.tags} : d
-        );
-      });
-    });
-  } else {
-    S.recipes.push(recipe);
-  }
-  // Auto-sync recipe ingredients into S.ingredients (type='ing', default have:true)
-  rcIngList.forEach(ingName => {
-    if (!S.ingredients.find(i=>i.name===ingName)) {
-      S.ingredients.push({name:ingName, have:true, kcal:0, type:'ing'});
-    }
-  });
-  save(); hideModal('recipeModal'); renderRecipeList(); renderIng();
-  toast(rcEditId ? '✅ 菜谱已更新' : '✅ 菜谱已添加');
-}
-
-function deleteRecipe(id) {
-  S.recipes = S.recipes.filter(r=>r.id!==id);
-  save(); renderRecipeList();
-  toast('🗑️ 菜谱已删除');
-}
-
-function aiEstimateRecipe() {
-  const name = document.getElementById('rcName').value.trim();
-  if (!name) { toast('请先填写菜名'); return; }
-  const btn = document.getElementById('rcAiBtn');
-  aiEstimateKcal(name, rcIngList, kcal => {
-    document.getElementById('rcKcal').value = kcal;
-  }, btn);
-}
-
-// ══════════════════════════════════════════════
-//  INGREDIENT FUNCTIONS
-// ══════════════════════════════════════════════
-function renderIng(q='') {
-  const c = document.getElementById('ingChips'); if (!c) return;
-  c.innerHTML='';
-  S.ingredients
-    .filter(i => i.type!=='fruit' && (!q || i.name.includes(q)))
-    .forEach((ing, idx) => {
-      const i = S.ingredients.indexOf(ing);
-      const sp = document.createElement('span');
-      sp.className = 'chip '+(ing.have?'ch-ing-on':'ch-ing-off');
-      const mark = ing.have ? '✓ ' : '✗ ';
-      sp.innerHTML = `${mark}${ing.name} <button class="chip-x" onclick="removeIng(${i});event.stopPropagation()">✕</button>`;
-      sp.onclick = () => { ing.have=!ing.have; save(); renderIng(q); renderRecipeList(); };
-      c.appendChild(sp);
-    });
-  // Takeouts
-  const tc = document.getElementById('toChips'); if (!tc) return;
-  tc.innerHTML='';
-  S.takeouts.forEach((to,i) => {
-    const sp = document.createElement('span');
-    sp.className='chip ch-to-on';
-    const kcalLbl = to.kcal ? ` ${to.kcal}kcal` : '';
-    sp.innerHTML=`${to.name}${kcalLbl} <button class="chip-x" onclick="removeTO(${i});event.stopPropagation()">✕</button>`;
-    tc.appendChild(sp);
-  });
-  renderFruits();
-}
-
-function addIng() {
-  const el=document.getElementById('ingIn'), raw=el.value.trim(); if(!raw) return;
-  raw.split(/[,，\s]+/).map(s=>s.trim()).filter(Boolean).forEach(v => {
-    if (!S.ingredients.find(i=>i.name===v))
-      S.ingredients.push({name:v, have:true, kcal:0, type:'ing'});
-  });
-  el.value='';
-  save(); renderIng(); renderRecipeList();
-}
-function removeIng(i) { S.ingredients.splice(i,1); save(); renderIng(); renderRecipeList(); }
-function addTO() {
-  const el=document.getElementById('toIn'), v=el.value.trim(); if(!v) return;
-  const kcal = parseInt(document.getElementById('toKcal').value)||0;
-  S.takeouts.push({name:v, kcal}); el.value='';
-  document.getElementById('toKcal').value='';
-  save(); renderIng();
-}
-function removeTO(i) { S.takeouts.splice(i,1); save(); renderIng(); }
-function aiEstimateTOLib() {
-  const name = document.getElementById('toIn').value.trim();
-  if (!name) { toast('请先填写外卖名称'); return; }
-  aiEstimateKcal(name, [], kcal => {
-    document.getElementById('toKcal').value = kcal;
-  }, document.getElementById('toLibAiBtn'));
-}
-
-// ── Fruit functions (unified array, type='fruit') ──
-function renderFruits() {
-  const c = document.getElementById('fruitChips'); if (!c) return;
-  c.innerHTML='';
-  S.ingredients
-    .filter(f => f.type==='fruit')
-    .forEach(f => {
-      const i = S.ingredients.indexOf(f);
-      const sp = document.createElement('span');
-      sp.className = 'chip '+(f.have?'ch-fruit-on':'ch-fruit-off');
-      const kcalLabel = f.kcal ? ` ${f.kcal}kcal` : '';
-      const mark = f.have ? '✓ ' : '✗ ';
-      sp.innerHTML = `${mark}${f.name}${kcalLabel} <button class="chip-x" onclick="removeFruit(${i});event.stopPropagation()">✕</button>`;
-      sp.onclick = () => { f.have=!f.have; save(); renderFruits(); };
-      c.appendChild(sp);
-    });
-  // Need-to-buy badge
-  const needBuy = S.ingredients.filter(f=>f.type==='fruit'&&!f.have).length;
-  const badge = document.getElementById('fruitNeedBuy');
-  if (badge) {
-    badge.style.display = needBuy ? '' : 'none';
-    badge.textContent = `🛒 待采购 ${needBuy} 种`;
-  }
-}
-function addFruit() {
-  const el=document.getElementById('fruitIn'), v=el.value.trim(); if(!v) return;
-  if (S.ingredients.find(i=>i.name===v)) { toast('已有该水果'); return; }
-  const kcal = parseInt(document.getElementById('fruitKcal').value)||0;
-  S.ingredients.push({name:v, have:true, kcal, type:'fruit'});
-  el.value=''; document.getElementById('fruitKcal').value='';
-  save(); renderFruits();
-}
-function removeFruit(i) { S.ingredients.splice(i,1); save(); renderFruits(); }
-
-// ══════════════════════════════════════════════
-//  SNACK FUNCTIONS
-// ══════════════════════════════════════════════
-function renderSnack() {
-  const today = dk(new Date());
-  const ws = getWeekStart();
-  let weekCount=0, weekKcal=0;
-  for(let i=0;i<7;i++){
-    const d=new Date(ws); d.setDate(ws.getDate()+i);
-    const entries=(S.snacks[dk(d)]||[]);
-    weekCount+=entries.length;
-    weekKcal+=entries.reduce((s,e)=>s+(e.kcal||0),0);
-  }
-  document.getElementById('snkCount').textContent=weekCount;
-  document.getElementById('snkKcal').textContent=weekKcal;
-  document.getElementById('snkLimit').textContent=S.settings.snackLimit;
-  const exCard=document.getElementById('exCard');
-  if(weekKcal>0){
-    exCard.style.display='';
-    document.getElementById('exWalk').textContent  = Math.round(weekKcal/4.5)+' 分钟';
-    document.getElementById('exRun').textContent   = Math.round(weekKcal/8)+' 分钟';
-    document.getElementById('exDance').textContent = Math.round(weekKcal/6.5)+' 分钟';
-    document.getElementById('exPlank').textContent = Math.round(weekKcal/5.5)+' 分钟';
-  } else exCard.style.display='none';
-  // Today log
-  const log=document.getElementById('snkTodayLog'); log.innerHTML='';
-  const todayEntries=S.snacks[today]||[];
-  if(!todayEntries.length){
-    log.innerHTML='<div class="empty"><span class="e">🍬</span>今天还没有零食记录</div>';
-  } else {
-    todayEntries.forEach((e,i)=>{
-      const div=document.createElement('div'); div.className='snk-log-item';
-      div.innerHTML=`<span style="font-size:18px">🍬</span><span style="flex:1">${e.name}</span><span style="color:var(--kb);font-weight:800">${e.kcal||'?'} kcal</span><span style="font-size:10px;color:var(--mu)">${e.time||''}</span><button class="mc-dish-del" onclick="deleteSnk('${today}',${i})">✕</button>`;
-      log.appendChild(div);
-    });
-  }
-  // Snack lib
-  const lib=document.getElementById('snkLib'); lib.innerHTML='';
-  S.snackLib.forEach((s,i)=>{
-    const sp=document.createElement('span'); sp.className='chip ch-snk';
-    sp.innerHTML=`${s.name} ${s.kcal?s.kcal+'kcal':''} <button class="chip-x" onclick="removeSnkLib(${i});event.stopPropagation()">✕</button>`;
-    lib.appendChild(sp);
-  });
-}
-function showSnackModal() {
-  document.getElementById('snkName').value='';
-  document.getElementById('snkKcalIn').value='';
-  const qs=document.getElementById('snkQuickSel'); qs.innerHTML='';
-  S.snackLib.forEach(s=>{
-    const btn=document.createElement('button');
-    btn.className='topt';
-    btn.textContent=`${s.name}${s.kcal?' ('+s.kcal+'kcal)':''}`;
-    btn.onclick=()=>{
-      document.getElementById('snkName').value=s.name;
-      document.getElementById('snkKcalIn').value=s.kcal||'';
-      document.querySelectorAll('#snkQuickSel .topt').forEach(b=>b.classList.remove('sel'));
-      btn.classList.add('sel');
-    };
-    qs.appendChild(btn);
-  });
-  showModal('snackModal');
-}
-function logSnack() {
-  const name=document.getElementById('snkName').value.trim();
-  const kcal=parseInt(document.getElementById('snkKcalIn').value)||0;
-  if(!name){toast('请填写零食名称');return;}
-  const today=dk(new Date());
-  if(!S.snacks[today]) S.snacks[today]=[];
-  const now=new Date();
-  S.snacks[today].push({name,kcal,time:`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`});
-  save(); hideModal('snackModal'); renderSnack();
-  toast('🍬 已记录！');
-}
-function deleteSnk(dayKey, i) {
-  S.snacks[dayKey]?.splice(i,1);
-  save(); renderSnack();
-}
-function addSnkLib() {
-  const n=document.getElementById('snkLibName').value.trim();
-  const k=parseInt(document.getElementById('snkLibKcal').value)||0;
-  if(!n){toast('请填写零食名称');return;}
-  S.snackLib.push({name:n,kcal:k});
-  document.getElementById('snkLibName').value='';
-  document.getElementById('snkLibKcal').value='';
-  save(); renderSnack();
-}
-function removeSnkLib(i){S.snackLib.splice(i,1);save();renderSnack();}
-function aiEstimateSnack() {
-  const name=document.getElementById('snkName').value.trim();
-  if(!name){toast('请先填写零食名称');return;}
-  aiEstimateKcal(name,[],kcal=>{document.getElementById('snkKcalIn').value=kcal;},document.getElementById('snkAiBtn'));
-}
-
-// ══════════════════════════════════════════════
-//  DATA PAGE
-// ══════════════════════════════════════════════
-function addWeight() {
-  const kg=parseFloat(document.getElementById('wtInput').value);
-  const dt=document.getElementById('wtDate').value;
-  if (!kg||!dt){toast('请填写体重和日期');return;}
-  const exists=S.weights.findIndex(w=>w.date===dt);
-  if(exists>=0) S.weights[exists].kg=kg;
-  else S.weights.push({date:dt,kg});
-  S.weights.sort((a,b)=>b.date.localeCompare(a.date));
-  save(); renderWeightLog(); updateBMI();
-  toast('⚖️ 体重已记录！');
-}
-function renderWeightLog(){
-  const c=document.getElementById('wtLog'); if(!c) return;
-  if(!S.weights.length){c.innerHTML='<div class="empty"><span class="e">⚖️</span>还没有记录</div>';renderBMIChart();return;}
-  c.innerHTML='';
-  S.weights.slice(0,8).forEach((w,i)=>{
-    const prev=S.weights[i+1];
-    const delta=prev?w.kg-prev.kg:null;
-    const deltaHtml=delta!==null?`<span class="${delta>0?'wt-delta-pos':'wt-delta-neg'}">${delta>0?'+':''}${delta.toFixed(1)}kg</span>`:'';
-    const div=document.createElement('div');div.className='wt-entry';
-    div.innerHTML=`<span style="color:var(--mu);font-size:11px">${w.date}</span><span style="font-weight:900">${w.kg} kg</span>${deltaHtml}<button class="mc-dish-del" onclick="deleteWeight('${w.date}')">✕</button>`;
-    c.appendChild(div);
-  });
-  renderBMIChart();
-}
-function deleteWeight(date){S.weights=S.weights.filter(w=>w.date!==date);save();renderWeightLog();updateBMI();}
-function renderBMIChart(){
-  const c=document.getElementById('bmiBarChart'); if(!c) return;
-  const data=S.weights.slice(0,7).reverse();
-  if(data.length<2){c.innerHTML='';return;}
-  const vals=data.map(w=>w.kg);
-  const mn=Math.min(...vals)-1, mx=Math.max(...vals)+1;
-  c.innerHTML=`<div class="wt-bars">${data.map(w=>{
-    const h=Math.round((w.kg-mn)/(mx-mn)*45)+5;
-    return `<div class="wt-bar-w"><div class="wt-bar" style="height:${h}px"></div><div class="wt-bar-l">${w.kg}</div></div>`;
-  }).join('')}</div>`;
-}
-function updateBMI(){
-  const h=S.settings.height;
-  const latest=S.weights[0];
-  if(!h||!latest){return;}
-  const bmi=latest.kg/((h/100)**2);
-  document.getElementById('bmiNum').textContent=bmi.toFixed(1);
-  document.getElementById('curWt').textContent=latest.kg+' kg';
-  let cls='偏瘦',bg='#4090f0';
-  if(bmi>=18.5&&bmi<24){cls='正常';bg='#3dbf87';}
-  else if(bmi>=24&&bmi<28){cls='超重';bg='#f0c030';}
-  else if(bmi>=28){cls='肥胖';bg='#e05050';}
-  document.getElementById('bmiCls').textContent=cls;
-  document.getElementById('bmiCls').style.background=bg+'30';
-  document.getElementById('bmiCls').style.color=bg;
-  const pct=Math.min(100,Math.max(0,(bmi-15)/(35-15)*100));
-  document.getElementById('bmiPtr').style.left=pct+'%';
-  document.getElementById('curWtGoal').textContent=S.settings.weightGoal?`目标：${S.settings.weightGoal} kg`:'';}
-
-function changeYear(d) {
-  calViewYear += d;
-  renderCalendar();
-}
-
-function changeMonth(d) {
-  calViewMonthNum += d;
-  if (calViewMonthNum > 11) { calViewMonthNum=0; calViewYear++; }
-  if (calViewMonthNum < 0)  { calViewMonthNum=11; calViewYear--; }
-  renderCalendar();
-}
-
-function renderCalendar() {
-  if (calViewYear===undefined) initCalView();
-  // Update split year / month labels
-  const yl = document.getElementById('calYearLabel');
-  const ml = document.getElementById('calMonthNumLabel');
-  if (yl) yl.textContent = calViewYear+'年';
-  if (ml) ml.textContent = (calViewMonthNum+1)+'月';
-
-  const year=calViewYear, month=calViewMonthNum;
-  const daysInMonth = new Date(year, month+1, 0).getDate();
-  const firstDow    = new Date(year, month, 1).getDay(); // 0=Sun
-  // Convert to Mon-first: Mon=0…Sun=6
-  const startOffset = (firstDow + 6) % 7;
-  const today = dk(new Date());
-  const goal  = S.settings.calories;
-
-  // Build daily kcal map
-  let totalEaten=0, daysUnder=0, daysOver=0, daysWithData=0;
-  const dayData = {}; // dateStr → kcal
-  for (let d=1; d<=daysInMonth; d++) {
-    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const plan=S.plan[dateStr]||{}, ci=S.checkins[dateStr]||{};
-    let kcal=0;
-    MTYPES.forEach(mt=>{ if(ci[mt]) (plan[mt]||[]).forEach(dish=>kcal+=(dish.kcal||0)); });
-    // Add snack kcal for this day
-    kcal += (S.snacks[dateStr]||[]).reduce((s,e)=>s+(e.kcal||0),0);
-    dayData[dateStr] = kcal;
-    const isFuture = dateStr > today;
-    if (!isFuture && kcal>0) { daysWithData++; totalEaten+=kcal; if(kcal<=goal) daysUnder++; else daysOver++; }
-  }
-
-  // Weekday headers (Mon~Sun)
-  const hdrEl = document.getElementById('kcalCalHeader'); hdrEl.innerHTML='';
-  ['一','二','三','四','五','六','日'].forEach(d => {
-    const cell = document.createElement('div');
-    cell.className = 'kcal-cal-hdr';
-    cell.textContent = d;
-    hdrEl.appendChild(cell);
-  });
-
-  // Day cells
-  const gridEl = document.getElementById('kcalCalGrid'); gridEl.innerHTML='';
-  // Empty cells before day 1
-  for (let i=0; i<startOffset; i++) {
-    const blank = document.createElement('div');
-    blank.className = 'kcal-cal-cell empty-day';
-    gridEl.appendChild(blank);
-  }
-  for (let d=1; d<=daysInMonth; d++) {
-    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const kcal = dayData[dateStr] || 0;
-    const isFuture = dateStr > today;
-    const isToday  = dateStr === today;
-
-    let cellClass = 'kcal-cal-cell ';
-    if      (isFuture)    cellClass += 'future';
-    else if (kcal === 0)  cellClass += 'no-data';
-    else if (kcal <= goal) cellClass += 'under';
-    else                   cellClass += 'over';
-    if (isToday) cellClass += ' today-cell';
-
-    const cell = document.createElement('div');
-    cell.className = cellClass;
-
-    const kcalClass = kcal>0 ? (kcal<=goal ? 'under' : 'over') : '';
-    const hasEx = (S.exercises[dateStr]||[]).length > 0;
-    const iconHtml = isToday ? '<span class="cal-day-icon">📍</span>'
-      : (kcal>0 && hasEx) ? '<span class="cal-day-icon">🔥💪</span>'
-      : kcal>0 ? '<span class="cal-day-icon">🔥</span>'
-      : hasEx ? '<span class="cal-day-icon">💪</span>'
-      : '';
-    cell.innerHTML = `
-      <span class="cal-day-num">${d}</span>
-      ${kcal>0 ? `<span class="cal-day-kcal ${kcalClass}">${kcal}</span>` : ''}
-      ${iconHtml}`;
-
-    // All cells (past, today, future) open the detail modal
-    {
-      const mealKcal = (() => {
-        const p=S.plan[dateStr]||{}, c=S.checkins[dateStr]||{};
-        return MTYPES.reduce((s,mt)=>c[mt]?(s+(p[mt]||[]).reduce((a,d)=>a+(d.kcal||0),0)):s,0);
-      })();
-      const snackKcal = (S.snacks[dateStr]||[]).reduce((s,e)=>s+(e.kcal||0),0);
-      cell.onclick = () => openDayDetail(year, month, d, mealKcal, snackKcal, goal);
-    }
-    gridEl.appendChild(cell);
-  }
-
-  // Stats
-  const avg = daysWithData ? Math.round(totalEaten/daysWithData) : 0;
-  document.getElementById('kcalStats').innerHTML = `
-    <div class="kcal-stat"><div class="kcal-stat-num" style="color:var(--mb)">${daysUnder}</div><div class="kcal-stat-lbl">达标天数</div></div>
-    <div class="kcal-stat"><div class="kcal-stat-num" style="color:var(--pb)">${daysOver}</div><div class="kcal-stat-lbl">超标天数</div></div>
-    <div class="kcal-stat"><div class="kcal-stat-num" style="color:var(--lb)">${avg||'—'}</div><div class="kcal-stat-lbl">日均摄入 kcal</div></div>`;
-}
-
-// ══════════════════════════════════════════════
-//  DAY DETAIL (kcal → exercise conversion)
-// ══════════════════════════════════════════════
-const WEEK_DAYS = ['日','一','二','三','四','五','六'];
-// ══════════════════════════════════════════════
-//  EXERCISE FUNCTIONS
-// ══════════════════════════════════════════════
-const EX_TYPES = [
-  {type:'快走',  icon:'🚶', rate:4.5},
-  {type:'跑步',  icon:'🏃', rate:8},
-  {type:'跳操',  icon:'💃', rate:6.5},
-  {type:'平板支撑',icon:'🧘',rate:5.5},
-  {type:'自定义', icon:'✏️', rate:null},
-];
-
-let _exDate = null; // date string for which exercise is being logged
-
-function openExerciseModal(dateStr) {
-  _exDate = dateStr;
-  document.getElementById('exMinIn').value   = '';
-  document.getElementById('exKcalIn').value  = '';
-  document.getElementById('exCustomName').value = '';
-  document.getElementById('exCustomRow').style.display = 'none';
-  // Build type chips
-  const c = document.getElementById('exTypeSel'); c.innerHTML='';
-  EX_TYPES.forEach(ex => {
-    const sp = document.createElement('span');
-    sp.className = 'chip ch-ex';
-    sp.dataset.type = ex.type;
-    sp.dataset.rate = ex.rate || '';
-    sp.textContent  = `${ex.icon} ${ex.type}`;
-    sp.onclick = () => {
-      document.querySelectorAll('#exTypeSel .chip').forEach(s=>s.classList.remove('sel'));
-      sp.classList.add('sel');
-      document.getElementById('exCustomRow').style.display = ex.type==='自定义' ? '' : 'none';
-      autoCalcExKcal();
-    };
-    c.appendChild(sp);
-  });
-  // Default select 跑步
-  c.children[1].click();
-  hideModal('dayDetailModal');
-  showModal('exerciseModal');
-}
-
-function autoCalcExKcal() {
-  const sel = document.querySelector('#exTypeSel .chip.sel');
-  if (!sel) return;
-  const rate = parseFloat(sel.dataset.rate);
-  const min  = parseInt(document.getElementById('exMinIn').value) || 0;
-  if (rate && min > 0)
-    document.getElementById('exKcalIn').value = Math.round(rate * min);
-}
-
-function closeExerciseModal() {
-  hideModal('exerciseModal');
-  // Re-open detail for the same date
-  if (_exDate) {
-    const [y,m,d] = _exDate.split('-').map(Number);
-    const mealKcal = (() => {
-      const p=S.plan[_exDate]||{}, ci=S.checkins[_exDate]||{};
-      return MTYPES.reduce((s,mt)=>ci[mt]?(s+(p[mt]||[]).reduce((a,dsh)=>a+(dsh.kcal||0),0)):s,0);
-    })();
-    const snackKcal = (S.snacks[_exDate]||[]).reduce((s,e)=>s+(e.kcal||0),0);
-    openDayDetail(y, m-1, d, mealKcal, snackKcal, S.settings.calories);
-  }
-}
-
-function logExercise() {
-  const sel = document.querySelector('#exTypeSel .chip.sel');
-  if (!sel) { toast('请选择运动类型'); return; }
-  const isCustom = sel.dataset.type === '自定义';
-  const customName = document.getElementById('exCustomName').value.trim();
-  if (isCustom && !customName) { toast('请填写运动名称'); return; }
-  const min  = parseInt(document.getElementById('exMinIn').value)  || 0;
-  const kcal = parseInt(document.getElementById('exKcalIn').value) || 0;
-  if (!min)  { toast('请填写运动时长'); return; }
-
-  const ex = isCustom
-    ? {type:customName, icon:'✏️', min, kcal}
-    : {type:sel.dataset.type, icon:sel.textContent.trim().split(' ')[0], min, kcal};
-
-  if (!S.exercises[_exDate]) S.exercises[_exDate] = [];
-  S.exercises[_exDate].push(ex);
-  save();
-  toast(`💪 已记录 ${ex.icon} ${ex.type} ${min} 分钟`);
-  closeExerciseModal(); // hides modal and re-opens day detail
-}
-
-function deleteExercise(dateStr, i) {
-  S.exercises[dateStr]?.splice(i, 1);
-  if (!S.exercises[dateStr]?.length) delete S.exercises[dateStr];
-  save();
-  // Re-open detail
-  const [y,m,d] = dateStr.split('-').map(Number);
-  const mealKcal = (() => {
-    const p=S.plan[dateStr]||{}, ci=S.checkins[dateStr]||{};
-    return MTYPES.reduce((s,mt)=>ci[mt]?(s+(p[mt]||[]).reduce((a,dsh)=>a+(dsh.kcal||0),0)):s,0);
-  })();
-  const snackKcal = (S.snacks[dateStr]||[]).reduce((s,e)=>s+(e.kcal||0),0);
-  openDayDetail(y, m-1, d, mealKcal, snackKcal, S.settings.calories);
-}
-
-// Jump to plan page at a specific date (dateStr = "YYYY-MM-DD")
-function ddJumpToPlan(dateStr) {
-  hideModal('dayDetailModal');
-  if (dateStr) {
-    // Calculate which week and day offset the target date sits in
-    const today = new Date(); today.setHours(0,0,0,0);
-    const todayDow = today.getDay();
-    // Monday of this (real) week
-    const thisWeekMon = new Date(today);
-    thisWeekMon.setDate(today.getDate() + (todayDow === 0 ? -6 : 1 - todayDow));
-
-    const target = new Date(dateStr + 'T00:00:00');
-    const targetDow = target.getDay(); // 0=Sun…6=Sat
-    // Monday of the target's week
-    const targetWeekMon = new Date(target);
-    targetWeekMon.setDate(target.getDate() + (targetDow === 0 ? -6 : 1 - targetDow));
-
-    // Week offset = difference in full weeks between the two Mondays
-    const msPerWeek = 7 * 24 * 3600 * 1000;
-    currentWeekOffset = Math.round((targetWeekMon - thisWeekMon) / msPerWeek);
-    // Day offset within that week (Mon=0 … Sun=6)
-    currentDayOffset = (targetDow === 0 ? 6 : targetDow - 1);
-    renderWeekDots(); renderDay();
-  }
-  const t = document.querySelector('.tab[onclick*="plan"]');
-  if (t) t.click();
-}
-
-// BMR using Mifflin-St Jeor female formula
-// Returns { bmr, usingDefaults } — defaults used when data incomplete
-function calcBMR() {
-  const height = S.settings.height || 165;
-  const age    = S.settings.age    || 28;
-  const weight = S.weights.length ? S.weights[0].kg : 55;
-  const usingDefaults = !S.settings.height || !S.settings.age || !S.weights.length;
-  // Female: BMR = 10×weight + 6.25×height - 5×age - 161
-  const bmr = Math.round(10*weight + 6.25*height - 5*age - 161);
-  return { bmr, usingDefaults };
-}
-
-function openDayDetail(year, month, day, mealKcal, snackKcal, goal) {
-  const kcal = mealKcal + snackKcal;
-  const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-  const dow = new Date(year, month, day).getDay();
-  document.getElementById('ddTitle').textContent = `${month+1}月${day}日 · 周${WEEK_DAYS[dow]}`;
-
-  const jumpBtn = `<button class="dd-jump-btn" onclick="ddJumpToPlan('${dateStr}')">→ 查看当天计划</button>`;
-  const recBtn  = `<button class="dd-rec-btn" onclick="openExerciseModal('${dateStr}')">💪 记录运动</button>`;
-
-  if (!kcal) {
-    document.getElementById('ddContent').innerHTML = `
-      <div style="text-align:center;padding:24px 0 10px">
-        <div style="font-size:36px;margin-bottom:10px">🍽️</div>
-        <div style="font-size:13px;font-weight:800;color:var(--mu)">暂无饮食记录</div>
-        <div style="font-size:11px;color:var(--mu);margin-top:4px">去计划页安排今日饮食并打卡</div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:6px">${recBtn}</div>
-      ${jumpBtn}`;
-    showModal('dayDetailModal');
-    return;
-  }
-
-  const { bmr, usingDefaults } = calcBMR();
-  const gap = kcal - bmr;
-  const gapAbs = Math.abs(gap);
-  const gapRow = gap <= 0
-    ? `<div class="dd-gap-row good">✅ 今日自然缺口 ${gapAbs} kcal，运动是加分项 💪</div>`
-    : `<div class="dd-gap-row warn">⚠️ 超出基础代谢 ${gap} kcal，运动可消耗多余部分</div>`;
-  const defaultsNote = usingDefaults
-    ? `<div style="font-size:10px;color:var(--mu);margin-top:4px;font-weight:700">* 基于默认数据估算，建议在设置中填写身高、年龄并记录体重</div>`
-    : '';
-
-  let exRefSection = '';
-  if (gap > 0) {
-    const walkMin=Math.round(gap/4.5), runMin=Math.round(gap/8);
-    const rows=[
-      {icon:'🚶',name:'快走',    min:walkMin, km:(walkMin*0.1).toFixed(1)},
-      {icon:'🏃',name:'跑步',    min:runMin,  km:(runMin/6).toFixed(1)},
-      {icon:'💃',name:'跳操',    min:Math.round(gap/6.5), km:null},
-      {icon:'🧘',name:'平板支撑',min:Math.round(gap/5.5), km:null},
-    ].map(r=>`
-      <div class="dd-ex-row">
-        <span class="dd-ex-name">${r.icon} ${r.name}</span>
-        <span class="dd-ex-km">${r.km?r.km+' km':''}</span>
-        <span class="dd-ex-min">${r.min} 分钟</span>
-      </div>`).join('');
-    exRefSection = `<div style="font-size:11px;font-weight:800;color:var(--mu);margin:10px 0 6px;letter-spacing:.5px">🔥 消耗多余热量需要：</div>${rows}`;
-  }
-
-  const exLog = S.exercises[dateStr] || [];
-  const totalExKcal = exLog.reduce((s,e)=>s+(e.kcal||0),0);
-  const netGap = gap - totalExKcal;
-  let exLogHtml = '';
-  if (exLog.length) {
-    const rows = exLog.map((e,i)=>`
-      <div class="dd-ex-log">
-        <span>${e.icon} ${e.type} ${e.min}分钟</span>
-        <span style="display:flex;align-items:center;gap:8px">
-          <span class="dd-ex-log-kcal">-${e.kcal} kcal</span>
-          <button class="mc-dish-del" onclick="deleteExercise('${dateStr}',${i})">✕</button>
-        </span>
-      </div>`).join('');
-    const netRow = `<div class="dd-gap-row ${netGap<=0?'good':'warn'}" style="margin-top:8px">
-      ${netGap<=0?`🎉 净缺口 ${Math.abs(netGap)} kcal，今天做得很好！`:`运动后还需再消耗 ${netGap} kcal`}
-    </div>`;
-    exLogHtml = `
-      <div style="font-size:11px;font-weight:800;color:var(--mu);margin:10px 0 6px;letter-spacing:.5px">💪 今日运动记录</div>
-      ${rows}${netRow}`;
-  }
-
-  document.getElementById('ddContent').innerHTML = `
-    <div class="dd-sum"><span class="dd-sum-lbl">🍽️ 餐食摄入</span><span style="font-size:14px;font-weight:800;color:var(--mu)">${mealKcal} kcal</span></div>
-    ${snackKcal?`<div class="dd-sum" style="margin-top:2px"><span class="dd-sum-lbl">🍬 零食摄入</span><span style="font-size:14px;font-weight:800;color:var(--mu)">${snackKcal} kcal</span></div>`:''}
-    <div class="dd-sum" style="border-top:2px solid var(--br);margin-top:4px;padding-top:8px">
-      <span class="dd-sum-lbl" style="font-weight:900">今日总摄入</span>
-      <span class="dd-sum-val${kcal>goal?' over':''}">${kcal} kcal</span>
-    </div>
-    <div class="dd-sum" style="margin-top:2px"><span class="dd-sum-lbl">基础代谢 (BMR)</span><span style="font-size:15px;font-weight:800;color:var(--mu)">${bmr} kcal</span></div>
-    ${gapRow}${defaultsNote}
-    ${exRefSection}
-    ${exLogHtml}
-    <div style="display:flex;gap:8px;margin-top:12px">${recBtn}</div>
-    ${jumpBtn}`;
-  showModal('dayDetailModal');
-}
-
 
 // ══════════════════════════════════════════════
 //  SETTINGS
 // ══════════════════════════════════════════════
 function loadSettingsUI() {
-  const s=S.settings;
-  ['calories','snackLimit'].forEach(k=>{
-    const el=document.getElementById('sv-'+k); if(el) el.textContent=s[k];
-  });
-  document.getElementById('heightIn').value  = s.height    ||'';
-  document.getElementById('ageIn').value     = s.age       ||'';
-  document.getElementById('avoidIn').value   = s.avoidFood ||'';
-  document.getElementById('goalIn').value    = s.weightGoal||'';
-  const adv = document.getElementById('goalAdvice');
-  if (adv) adv.innerHTML = s.goalAdviceTxt||'';
-  document.getElementById('apiKeyIn').value  = s.apiKey    ||'';
-  document.querySelectorAll('.prov-opt').forEach(el=>
-    el.classList.toggle('active', el.dataset.p===s.apiProvider)
+  const s = S.settings;
+  document.getElementById('apiKeyIn').value = s.apiKey||'';
+  document.querySelectorAll('.prov-opt').forEach(el =>
+    el.classList.toggle('active', el.dataset.p === s.apiProvider)
   );
-  document.getElementById('apiHint').textContent=API_HINTS[s.apiProvider]||'';
-  const {url,key}=loadCloudConfig();
-  document.getElementById('sbUrlIn').value=url||'';
-  document.getElementById('sbKeyIn').value=key||'';
+  document.getElementById('apiHint').textContent = API_HINTS[s.apiProvider]||'';
+  const {url,key} = loadCloudConfig();
+  document.getElementById('sbUrlIn').value = url||'';
+  document.getElementById('sbKeyIn').value = key||'';
   updateCloudStatus();
+  renderTagMgmt();
 }
-function adj(key,delta){
-  const lims={calories:[800,3000],snackLimit:[0,14]};
-  const [mn,mx]=lims[key];
-  S.settings[key]=Math.max(mn,Math.min(mx,(S.settings[key]||0)+delta));
-  const el=document.getElementById('sv-'+key); if(el) el.textContent=S.settings[key];
+
+function saveSettings() {
+  S.settings.apiKey      = document.getElementById('apiKeyIn').value.trim();
+  S.settings.apiProvider = document.querySelector('.prov-opt.active')?.dataset?.p || 'siliconflow';
   save();
-  if(key==='calories') document.getElementById('goalEl').textContent=S.settings.calories+' kcal';
-  if(key==='snackLimit') document.getElementById('snkLimit').textContent=S.settings.snackLimit;
+  toast('💾 设置已保存');
+  hideModal('settingsModal');
 }
-function selProv(el){
-  document.querySelectorAll('.prov-opt').forEach(e=>e.classList.remove('active'));
+
+function selProv(el) {
+  document.querySelectorAll('.prov-opt').forEach(e => e.classList.remove('active'));
   el.classList.add('active');
-  S.settings.apiProvider=el.dataset.p;
-  document.getElementById('apiHint').textContent=API_HINTS[el.dataset.p]||'';
+  document.getElementById('apiHint').textContent = API_HINTS[el.dataset.p]||'';
 }
-function saveSettings(){
-  const s=S.settings;
-  s.height     = parseFloat(document.getElementById('heightIn').value)||0;
-  s.age        = parseInt(document.getElementById('ageIn').value)||0;
-  s.avoidFood  = document.getElementById('avoidIn').value;
-  s.weightGoal = parseFloat(document.getElementById('goalIn').value)||0;
-  s.apiKey     = document.getElementById('apiKeyIn').value.trim();
-  const prov=document.querySelector('.prov-opt.active')?.dataset?.p;
-  if(prov) s.apiProvider=prov;
+
+// ══════════════════════════════════════════════
+//  TAG MANAGEMENT
+// ══════════════════════════════════════════════
+// Generic tag bar builder — used for recipes page and add-dish picker
+function renderTagBar(containerId, activeTag, onClickTag) {
+  const c = document.getElementById(containerId); if (!c) return;
+  c.innerHTML = '';
+  ['全部', ...S.recipeTags].forEach(tag => {
+    const btn = document.createElement('button');
+    btn.className = 'tbar-tag' + (tag===activeTag ? ' active' : '');
+    btn.textContent = tag;
+    btn.onclick = () => onClickTag(tag);
+    c.appendChild(btn);
+  });
+}
+
+function renderTagMgmt() {
+  const c = document.getElementById('tagMgmt'); if (!c) return;
+  c.innerHTML = '';
+  S.recipeTags.forEach((tag, i) => {
+    const p = TAG_PALETTE[i % TAG_PALETTE.length];
+    const span = document.createElement('span');
+    span.style.cssText = `display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:700;background:${p.bg};color:${p.c};border:1.5px solid ${p.c}30`;
+    span.innerHTML = `${tag} <button class="chip-x" onclick="deleteTag(${i})">✕</button>`;
+    c.appendChild(span);
+  });
+}
+
+function addTag() {
+  const inp = document.getElementById('tagIn');
+  const val = inp.value.trim();
+  if (!val || S.recipeTags.includes(val)) { inp.value=''; return; }
+  S.recipeTags.push(val);
+  inp.value = '';
   save();
-  document.getElementById('goalEl').textContent=s.calories+' kcal';
-  document.getElementById('snkLimit').textContent=s.snackLimit;
-  updateBMI();
-  toast('💾 设置已保存！');
+  refreshRcTagBar();
+  renderTagMgmt();
+}
+
+function deleteTag(i) {
+  S.recipeTags.splice(i, 1);
+  save();
+  refreshRcTagBar();
+  renderTagMgmt();
+}
+
+function refreshRcTagBar() {
+  renderTagBar('rcTagBar', _rcTagFilter, tag => {
+    _rcTagFilter = tag;
+    refreshRcTagBar();
+    renderRecipeList();
+  });
+}
+
+function refreshPickTagBar() {
+  renderTagBar('pickTagBar', _pickTagFilter, tag => {
+    _pickTagFilter = tag;
+    refreshPickTagBar();
+    renderPickList();
+  });
+}
+
+// ══════════════════════════════════════════════
+//  RECIPES PAGE
+// ══════════════════════════════════════════════
+function renderRecipeList() {
+  const c = document.getElementById('recipeList'); if (!c) return;
+  const filtered = S.recipes.filter(r =>
+    _rcTagFilter==='全部' || (r.tags||[]).includes(_rcTagFilter)
+  );
+  if (!filtered.length) {
+    c.innerHTML = `<div class="empty"><span class="e">🍽️</span>还没有菜谱，点上方按钮添加！</div>`;
+    return;
+  }
+  c.innerHTML = '';
+  filtered.forEach(r => c.appendChild(buildRecipeCard(r)));
+}
+
+function buildRecipeCard(r) {
+  const div = document.createElement('div');
+  div.className = 'rc';
+  div.id = 'rc-'+r.id;
+
+  let ingsHtml = '';
+  if (r.ingredients && r.ingredients.length) {
+    ingsHtml = r.ingredients.map(name => {
+      const fi = S.ingredients.find(i => i.name===name);
+      if (!fi) return `<span style="color:var(--mu)">${name}</span>`;
+      return fi.have ? `<span class="ing-ok">✓${name}</span>` : `<span class="ing-miss">✗${name}</span>`;
+    }).join(' · ');
+  }
+
+  const tagsHtml = (r.tags||[]).map(t =>
+    `<span class="rtag" style="${tagStyle(t)}">${t}</span>`
+  ).join('');
+
+  div.innerHTML = `
+    <div class="rc-top">
+      <div class="rc-emoji">${r.emoji||'🍽️'}</div>
+      <div class="rc-info">
+        <div class="rc-name">${r.name}</div>
+        <div class="rc-kcal">${r.kcal ? r.kcal+' kcal' : '热量未填写'}</div>
+        <div class="rc-tags">${tagsHtml}</div>
+      </div>
+    </div>
+    ${ingsHtml ? `<div class="rc-ings">${ingsHtml}</div>` : ''}
+    <div class="rc-btns">
+      <button class="rbtn" onclick="openRecipeModal('${r.id}')">✏️ 编辑</button>
+      <button class="rbtn del" onclick="deleteRecipe('${r.id}')">🗑 删除</button>
+      <button class="rbtn add" onclick="toggleMealPop('${r.id}')">➕ 今日</button>
+    </div>
+    <div class="meal-pop" id="mealPop-${r.id}">
+      <button class="mpbtn" onclick="addRecipeToMeal('${r.id}','breakfast')">🌅 早餐</button>
+      <button class="mpbtn" onclick="addRecipeToMeal('${r.id}','lunch')">☀️ 午餐</button>
+      <button class="mpbtn" onclick="addRecipeToMeal('${r.id}','dinner')">🌙 晚餐</button>
+    </div>`;
+  return div;
+}
+
+function toggleMealPop(rid) {
+  document.querySelectorAll('.meal-pop.show').forEach(p => {
+    if (p.id !== 'mealPop-'+rid) p.classList.remove('show');
+  });
+  document.getElementById('mealPop-'+rid)?.classList.toggle('show');
+}
+
+function addRecipeToMeal(rid, meal) {
+  const r = S.recipes.find(x => x.id===rid); if (!r) return;
+  const today = dk(new Date());
+  if (!S.plan[today]) S.plan[today] = {breakfast:[],lunch:[],dinner:[]};
+  S.plan[today][meal].push({name:r.name, emoji:r.emoji||'🍽️', kcal:r.kcal||0});
+  save();
+  document.getElementById('mealPop-'+rid)?.classList.remove('show');
+  toast(`✅ 已加入 ${MLABELS[meal]}`);
+}
+
+function deleteRecipe(rid) {
+  if (!confirm('确定删除这道菜谱？')) return;
+  S.recipes = S.recipes.filter(r => r.id!==rid);
+  save(); renderRecipeList();
+}
+
+// ══════════════════════════════════════════════
+//  RECIPE MODAL
+// ══════════════════════════════════════════════
+function openRecipeModal(id) {
+  _rcEditId  = id;
+  _rcIngList = [];
+  const r = id ? S.recipes.find(x => x.id===id) : null;
+
+  document.getElementById('rcModalTitle').textContent = r ? '编辑菜谱' : '添加菜谱';
+  document.getElementById('rcName').value = r?.name || '';
+  const emojiEl = document.getElementById('rcEmoji');
+  emojiEl.value = r?.emoji || '';
+  emojiEl.dataset.userSet = r?.emoji ? '1' : '';
+  document.getElementById('rcKcal').value = r?.kcal || '';
+  document.getElementById('rcNote').value = r?.note || '';
+  _rcIngList = r ? [...(r.ingredients||[])] : [];
+
+  const ts = document.getElementById('rcTagSel'); ts.innerHTML='';
+  S.recipeTags.forEach(tag => {
+    const btn = document.createElement('button');
+    btn.className = 'topt' + ((r?.tags||[]).includes(tag) ? ' sel' : '');
+    btn.textContent = tag;
+    btn.onclick = () => btn.classList.toggle('sel');
+    ts.appendChild(btn);
+  });
+
+  renderRcIngChips();
+
+  const dl = document.getElementById('rcIngDatalist'); dl.innerHTML='';
+  S.ingredients.forEach(i => {
+    const opt = document.createElement('option'); opt.value = i.name; dl.appendChild(opt);
+  });
+
+  showModal('recipeModal');
+  setTimeout(() => document.getElementById('rcName').focus(), 350);
+}
+
+function renderRcIngChips() {
+  const c = document.getElementById('rcIngChips'); if (!c) return;
+  c.innerHTML = '';
+  _rcIngList.forEach((name, i) => {
+    const span = document.createElement('span');
+    span.className = 'chip';
+    span.innerHTML = `${name} <button class="chip-x" onclick="removeRcIng(${i})">✕</button>`;
+    c.appendChild(span);
+  });
+}
+
+function addRcIng() {
+  const inp = document.getElementById('rcIngInput');
+  const val = inp.value.trim();
+  if (!val || _rcIngList.includes(val)) { inp.value=''; return; }
+  _rcIngList.push(val);
+  inp.value = '';
+  renderRcIngChips();
+}
+
+function removeRcIng(i) {
+  _rcIngList.splice(i, 1);
+  renderRcIngChips();
+}
+
+function saveRecipe() {
+  const name  = document.getElementById('rcName').value.trim();
+  const emoji = document.getElementById('rcEmoji').value.trim();
+  const kcal  = parseInt(document.getElementById('rcKcal').value) || 0;
+  const note  = document.getElementById('rcNote').value.trim();
+  if (!name) { toast('请填写菜品名称'); return; }
+
+  const tags = [...document.querySelectorAll('#rcTagSel .topt.sel')].map(b => b.textContent);
+
+  if (_rcEditId) {
+    const r = S.recipes.find(x => x.id===_rcEditId);
+    if (r) Object.assign(r, {name, emoji:emoji||autoEmojiFor(name), kcal, tags, ingredients:_rcIngList, note});
+  } else {
+    S.recipes.unshift({id:uid(), name, emoji:emoji||autoEmojiFor(name), kcal, tags, ingredients:_rcIngList, note});
+  }
+  save();
+  hideModal('recipeModal');
+  renderRecipeList();
+  toast(_rcEditId ? '✅ 菜谱已更新' : '✅ 菜谱已添加');
+}
+
+function autoEmojiFor(name) {
+  for (const [k,v] of Object.entries(EMOJI_MAP)) { if (name.includes(k)) return v; }
+  return '🍽️';
+}
+
+function autoEmoji(name) {
+  const emojiEl = document.getElementById('rcEmoji');
+  if (!emojiEl.dataset.userSet) emojiEl.value = autoEmojiFor(name);
+}
+
+// ══════════════════════════════════════════════
+//  INGREDIENTS PAGE
+// ══════════════════════════════════════════════
+function renderIngList() {
+  const c = document.getElementById('ingList'); if (!c) return;
+  if (!S.ingredients.length) {
+    c.innerHTML = '<div style="text-align:center;padding:14px;color:var(--mu);font-size:12px;font-weight:700">还没有食材，添加一些吧！</div>';
+    return;
+  }
+  c.innerHTML = '';
+  [...S.ingredients].sort((a,b) => (b.have?1:0)-(a.have?1:0)).forEach(ing => {
+    const div = document.createElement('div');
+    div.className = 'ing-item';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'ing-item-name';
+    nameSpan.textContent = ing.name;
+
+    const togBtn = document.createElement('button');
+    togBtn.className = `ing-tog ${ing.have ? 'have' : 'lack'}`;
+    togBtn.textContent = ing.have ? '✓ 有货' : '✗ 缺货';
+    togBtn.onclick = () => toggleIng(ing.name);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'ing-item-del';
+    delBtn.textContent = '✕';
+    delBtn.onclick = () => deleteIng(ing.name);
+
+    div.appendChild(nameSpan);
+    div.appendChild(togBtn);
+    div.appendChild(delBtn);
+    c.appendChild(div);
+  });
+}
+
+function addIng() {
+  const inp = document.getElementById('ingInput');
+  const val = inp.value.trim();
+  if (!val) return;
+  if (S.ingredients.find(i => i.name===val)) { toast('食材已存在'); inp.value=''; return; }
+  S.ingredients.push({name:val, have:true});
+  inp.value = '';
+  save(); renderIngList(); renderRecipeList();
+}
+
+function toggleIng(name) {
+  const ing = S.ingredients.find(i => i.name===name); if (!ing) return;
+  ing.have = !ing.have;
+  save(); renderIngList(); renderRecipeList();
+}
+
+function deleteIng(name) {
+  S.ingredients = S.ingredients.filter(i => i.name!==name);
+  save(); renderIngList(); renderRecipeList();
+}
+
+// ══════════════════════════════════════════════
+//  TODAY PAGE
+// ══════════════════════════════════════════════
+function renderToday() {
+  const now   = new Date();
+  const today = dk(now);
+  document.getElementById('todayDateLbl').textContent =
+    `${now.getMonth()+1}月${now.getDate()}日 · 周${DAYS[now.getDay()]}`;
+
+  const plan = S.plan[today] || {};
+  let totalKcal = 0;
+  MTYPES.forEach(mt => (plan[mt]||[]).forEach(d => totalKcal += d.kcal||0));
+  document.getElementById('todayKcalBig').textContent = totalKcal || 0;
+
+  const area = document.getElementById('mealsArea'); area.innerHTML = '';
+  MTYPES.forEach(mt => {
+    const dishes = plan[mt] || [];
+    const mkcal  = dishes.reduce((s,d) => s+(d.kcal||0), 0);
+    const mc = document.createElement('div'); mc.className = 'meal-card';
+
+    const hdr = document.createElement('div'); hdr.className = 'meal-hdr';
+    hdr.innerHTML = `
+      <span class="meal-badge ${MBADGE[mt]}">${MLABELS[mt]}</span>
+      ${mkcal ? `<span class="meal-sub-kcal">${mkcal} kcal</span>` : ''}`;
+    mc.appendChild(hdr);
+
+    if (!dishes.length) {
+      const emp = document.createElement('div'); emp.className = 'meal-empty';
+      emp.innerHTML = '<span>🍽️</span><span>还没有安排</span>';
+      mc.appendChild(emp);
+    } else {
+      dishes.forEach((dish, idx) => {
+        const row = document.createElement('div'); row.className = 'dish-row';
+        row.innerHTML = `
+          <span class="dish-emoji">${dish.emoji||'🍽️'}</span>
+          <span class="dish-name">${dish.name}</span>
+          <span class="dish-kcal">${dish.kcal ? dish.kcal+' kcal' : '—'}</span>
+          <button class="dish-del" onclick="deleteDish('${today}','${mt}',${idx})">✕</button>`;
+        mc.appendChild(row);
+      });
+    }
+
+    const foot = document.createElement('div'); foot.className = 'meal-add';
+    foot.innerHTML = `<button class="meal-add-btn" onclick="openAddDish('${mt}')">＋ 添加菜品</button>`;
+    mc.appendChild(foot);
+    area.appendChild(mc);
+  });
+}
+
+function deleteDish(dateKey, mt, idx) {
+  S.plan[dateKey]?.[mt]?.splice(idx, 1);
+  save(); renderToday();
+}
+
+// ══════════════════════════════════════════════
+//  ADD DISH MODAL
+// ══════════════════════════════════════════════
+function openAddDish(meal) {
+  _pickMeal      = meal;
+  _pickSelected  = new Set();
+  _pickTagFilter = '全部';
+
+  document.getElementById('addDishTitle').textContent = `添加到${MLABELS[meal]}`;
+  document.getElementById('pickSearch').value = '';
+  document.getElementById('manName').value    = '';
+  document.getElementById('manKcal').value    = '';
+
+  switchAddTab('lib', document.getElementById('stab-lib'));
+  refreshPickTagBar();
+  renderPickList();
+  showModal('addDishModal');
+}
+
+function switchAddTab(name, el) {
+  document.getElementById('addTab-lib').style.display    = name==='lib'    ? '' : 'none';
+  document.getElementById('addTab-manual').style.display = name==='manual' ? '' : 'none';
+  document.querySelectorAll('.stab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function renderPickList() {
+  const c = document.getElementById('pickList'); if (!c) return;
+  const q = document.getElementById('pickSearch').value.trim().toLowerCase();
+  const filtered = S.recipes.filter(r => {
+    const tagOk    = _pickTagFilter==='全部' || (r.tags||[]).includes(_pickTagFilter);
+    const searchOk = !q || r.name.toLowerCase().includes(q);
+    return tagOk && searchOk;
+  });
+  if (!filtered.length) {
+    c.innerHTML = '<div class="empty" style="padding:16px 0"><span class="e">🔍</span>没有匹配的菜谱</div>';
+    return;
+  }
+  c.innerHTML = '';
+  filtered.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'pick-item' + (_pickSelected.has(r.id) ? ' sel' : '');
+    div.innerHTML = `
+      <div class="pick-check">${_pickSelected.has(r.id) ? '✓' : ''}</div>
+      <div class="pick-emoji">${r.emoji||'🍽️'}</div>
+      <div class="pick-info">
+        <div class="pick-name">${r.name}</div>
+        <div class="pick-kcal">${r.kcal ? r.kcal+' kcal' : '热量未填写'}</div>
+      </div>`;
+    div.onclick = () => {
+      _pickSelected.has(r.id) ? _pickSelected.delete(r.id) : _pickSelected.add(r.id);
+      renderPickList();
+    };
+    c.appendChild(div);
+  });
+}
+
+function confirmPick() {
+  if (!_pickSelected.size) { toast('请先选择菜品'); return; }
+  const today = dk(new Date());
+  if (!S.plan[today]) S.plan[today] = {breakfast:[],lunch:[],dinner:[]};
+  _pickSelected.forEach(rid => {
+    const r = S.recipes.find(x => x.id===rid); if (!r) return;
+    S.plan[today][_pickMeal].push({name:r.name, emoji:r.emoji||'🍽️', kcal:r.kcal||0});
+  });
+  save();
+  hideModal('addDishModal');
+  renderToday();
+  toast(`✅ 已加入${MLABELS[_pickMeal]}`);
+}
+
+function confirmManual() {
+  const name = document.getElementById('manName').value.trim();
+  const kcal = parseInt(document.getElementById('manKcal').value) || 0;
+  if (!name) { toast('请填写菜品名称'); return; }
+  const today = dk(new Date());
+  if (!S.plan[today]) S.plan[today] = {breakfast:[],lunch:[],dinner:[]};
+  S.plan[today][_pickMeal].push({name, emoji:'🍽️', kcal});
+  save();
+  hideModal('addDishModal');
+  renderToday();
+  toast(`✅ 已加入${MLABELS[_pickMeal]}`);
 }
 
 // ══════════════════════════════════════════════
 //  AI ESTIMATION
 // ══════════════════════════════════════════════
-async function aiEstimateKcal(name, ings, callback, btn) {
+async function aiEstimate(name, ings, callback, btn) {
   const {apiKey, apiProvider} = S.settings;
   if (!apiKey) { toast('请先在设置中填写 API Key'); return; }
-  const conf = API_CONF[apiProvider];
-  if (!conf) return;
+  const conf = API_CONF[apiProvider]; if (!conf) return;
 
   const origText = btn.textContent;
   btn.disabled = true;
   btn.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
 
   const ingStr = ings.length ? `，食材：${ings.join('、')}` : '';
-  const prompt = `请估算这道菜或食物一份（一人份）的热量。只返回一个整数数字，不要任何其他文字或单位。菜名：${name}${ingStr}`;
+  const prompt = `估算这道菜一人份热量。只返回一个整数，不要任何其他文字。菜名：${name}${ingStr}`;
 
   try {
     let kcal = 0;
@@ -2418,7 +1098,7 @@ async function aiEstimateKcal(name, ings, callback, btn) {
       const res = await fetch(conf.url, {
         method:'POST',
         headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
-        body:JSON.stringify({model:conf.model,max_tokens:20,messages:[{role:'user',content:prompt}]})
+        body:JSON.stringify({model:conf.model, max_tokens:20, messages:[{role:'user',content:prompt}]})
       });
       const d = await res.json();
       kcal = parseInt(d.content?.[0]?.text?.trim()) || 0;
@@ -2426,7 +1106,7 @@ async function aiEstimateKcal(name, ings, callback, btn) {
       const res = await fetch(conf.url, {
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
-        body:JSON.stringify({model:conf.model,max_tokens:20,messages:[{role:'user',content:prompt}]})
+        body:JSON.stringify({model:conf.model, max_tokens:20, messages:[{role:'user',content:prompt}]})
       });
       const d = await res.json();
       kcal = parseInt(d.choices?.[0]?.message?.content?.trim()) || 0;
@@ -2442,132 +1122,40 @@ async function aiEstimateKcal(name, ings, callback, btn) {
   }
 }
 
-// ══════════════════════════════════════════════
-//  AI CALORIE GOAL ESTIMATION
-// ══════════════════════════════════════════════
-function clearGoalAdvice() {
-  const el = document.getElementById('goalAdvice');
-  if (el) el.innerHTML = '';
-  S.settings.goalAdviceTxt = '';
+function aiEstimateRecipe() {
+  const name = document.getElementById('rcName').value.trim();
+  if (!name) { toast('请先填写菜品名称'); return; }
+  aiEstimate(name, _rcIngList, kcal => { document.getElementById('rcKcal').value = kcal; },
+    document.getElementById('rcAiBtn'));
 }
-async function aiEstimateCalories() {
-  const { apiKey, apiProvider } = S.settings;
-  if (!apiKey) { toast('请先在设置中填写 API Key'); return; }
-  const h   = parseFloat(document.getElementById('heightIn').value) || S.settings.height;
-  const age = parseInt(document.getElementById('ageIn').value)      || S.settings.age;
-  const g   = parseFloat(document.getElementById('goalIn').value)   || 0;
-  if (!h || !age) { toast('请先填写身高和年龄'); return; }
-  if (!g)         { toast('请先填写目标体重'); return; }
-  const latest = S.weights[0];
-  if (!latest)    { toast('请先在数据页记录当前体重'); return; }
 
-  const btn = document.getElementById('goalAiBtn');
-  const origText = btn.textContent;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
-
-  const diff = (latest.kg - g).toFixed(1);
-  const bmi  = (latest.kg / ((h / 100) ** 2)).toFixed(1);
-  const prompt = `用户：${age}岁，身高${h}cm，当前体重${latest.kg}kg，BMI${bmi}，目标体重${g}kg，需减重${diff}kg。请给出建议每日摄入热量（kcal）、预计达标周数、一句简短饮食建议。只返回JSON：{"kcal":数字,"weeks":数字,"tip":"建议文字不超过20字"}，不要其他任何内容。`;
-
-  const conf = API_CONF[apiProvider];
-  try {
-    let text = '';
-    if (apiProvider === 'claude') {
-      const res = await fetch(conf.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: conf.model, max_tokens: 120, messages: [{ role: 'user', content: prompt }] })
-      });
-      const d = await res.json();
-      text = d.content?.[0]?.text?.trim() || '';
-    } else {
-      const res = await fetch(conf.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-        body: JSON.stringify({ model: conf.model, max_tokens: 120, messages: [{ role: 'user', content: prompt }] })
-      });
-      const d = await res.json();
-      text = d.choices?.[0]?.message?.content?.trim() || '';
-    }
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-    const { kcal, weeks, tip } = parsed;
-    if (kcal > 0) {
-      S.settings.calories = kcal;
-      const adviceHtml = `🎯 建议每日摄入 <strong>${kcal} kcal</strong>，预计 <strong>${weeks}</strong> 周达标<br>💡 ${tip}`;
-      S.settings.goalAdviceTxt = adviceHtml;
-      document.getElementById('sv-calories').textContent = kcal;
-      document.getElementById('goalEl').textContent = kcal + ' kcal';
-      document.getElementById('goalAdvice').innerHTML = adviceHtml;
-      save();
-      toast(`✅ 已自动更新每日目标为 ${kcal} kcal`);
-    } else {
-      toast('AI返回格式异常，请手动设置');
-    }
-  } catch(e) {
-    console.warn('AI calories error', e);
-    toast('AI估算失败，请检查 API Key');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = origText;
-  }
-}
-function buildThemeGrid(){
-  const g=document.getElementById('themeGrid'); if(!g) return;
-  THEMES.forEach((t,i)=>{
-    const div=document.createElement('div'); div.className='theme-opt'+(i===0?' active':'');
-    div.innerHTML=`<div class="theme-swatch" style="background:linear-gradient(${t.hdr})"></div><div class="theme-name">${t.name}</div>`;
-    div.onclick=()=>{
-      applyTheme(t);
-      document.querySelectorAll('.theme-opt').forEach(d=>d.classList.remove('active'));
-      div.classList.add('active');
-    };
-    g.appendChild(div);
-  });
-}
-function applyTheme(t){
-  const r=document.documentElement.style;
-  r.setProperty('--mb',t.mb); r.setProperty('--md',t.md); r.setProperty('--ml',t.ml);
-  r.setProperty('--lb',t.lb); r.setProperty('--ld',t.ld); r.setProperty('--ll',t.ll);
-  document.querySelector('.hdr').style.background=`linear-gradient(${t.hdr})`;
+function aiEstimateManual() {
+  const name = document.getElementById('manName').value.trim();
+  if (!name) { toast('请先填写菜品名称'); return; }
+  aiEstimate(name, [], kcal => { document.getElementById('manKcal').value = kcal; },
+    document.getElementById('manAiBtn'));
 }
 
 // ══════════════════════════════════════════════
 //  UTILITIES
 // ══════════════════════════════════════════════
-function showModal(id){ document.getElementById(id).classList.add('show'); document.body.style.overflow='hidden'; }
-function hideModal(id){ document.getElementById(id).classList.remove('show'); document.body.style.overflow=''; }
+function showModal(id) {
+  document.getElementById(id).classList.add('show');
+  document.body.style.overflow = 'hidden';
+  if (id === 'settingsModal') loadSettingsUI();
+}
+function hideModal(id) {
+  document.getElementById(id).classList.remove('show');
+  document.body.style.overflow = '';
+}
 
 let _toastT;
-function toast(msg){
-  const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show');
-  clearTimeout(_toastT); _toastT=setTimeout(()=>el.classList.remove('show'),2200);
-}
-
-function celebrate(msg){
-  const w=document.getElementById('celebWrap'), m=document.getElementById('celebMsg');
-  w.style.display='flex'; m.textContent=msg;
-  setTimeout(()=>m.classList.add('show'),30);
-  setTimeout(()=>{ m.classList.remove('show'); setTimeout(()=>w.style.display='none',300); },1900);
-}
-
-function burstConfetti(anchor){
-  const pieces=['🌟','✨','💚','🎉','🥗','💫'];
-  const rect=anchor?anchor.getBoundingClientRect():{left:window.innerWidth/2,top:window.innerHeight/2,width:80,height:32};
-  const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
-  for(let i=0;i<10;i++){
-    const el=document.createElement('div'); el.className='confetti-particle';
-    el.textContent=pieces[i%pieces.length];
-    const angle=(i/10)*360, dist=55+Math.random()*45;
-    const rad=(angle-90)*Math.PI/180;
-    const tx=Math.round(Math.cos(rad)*dist), ty=Math.round(Math.sin(rad)*dist-20);
-    const dur=(.5+Math.random()*.35).toFixed(2);
-    const rot=Math.round((Math.random()-.5)*360);
-    el.style.cssText=`left:${cx}px;top:${cy}px;--tx:${tx}px;--ty:${ty}px;--dur:${dur}s;--rot:${rot}deg`;
-    document.body.appendChild(el);
-    setTimeout(()=>el.remove(),parseFloat(dur)*1000+50);
-  }
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => el.classList.remove('show'), 2400);
 }
 </script>
 </body>
