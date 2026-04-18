@@ -83,6 +83,11 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
 .ing-tog.lack{background:#ffd4d4;color:#b03030}
 .ing-item-del{background:none;border:none;color:#d8d8e8;cursor:pointer;font-size:14px;padding:4px 6px;border-radius:6px;flex-shrink:0}
 .ing-item-del:active{color:var(--re)}
+.ing-item-edit{background:none;border:none;color:#c8c8e0;cursor:pointer;font-size:13px;padding:4px 5px;border-radius:6px;flex-shrink:0}
+.ing-item-edit:active{color:var(--pu)}
+.ing-edit-inp{flex:1;background:#fff;border:1.5px solid var(--gd);border-radius:8px;padding:5px 9px;font-size:13px;font-family:'Nunito',sans-serif;color:var(--tx);outline:none;min-width:0}
+.ing-edit-ok{background:var(--gl);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:800;color:#1a6a48;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0}
+.ing-edit-cancel{background:var(--bg);border:1px solid var(--br);border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;color:var(--mu);cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0}
 /* ── INGREDIENT TAG MODE ── */
 .ing-view-toggle{display:flex;gap:4px}
 .ing-view-btn{background:var(--bg);border:1.5px solid var(--br);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;color:var(--mu);transition:all .15s}
@@ -426,6 +431,7 @@ let _rcEditId     = null;
 let _rcIngList    = [];
 let _rcTagFilter  = '全部';
 let _ingView      = 'list'; // 'list' | 'tag'
+let _editingIng   = null;  // 当前正在编辑名称的食材
 
 // ══════════════════════════════════════════════
 //  PERSISTENCE
@@ -1022,27 +1028,95 @@ function renderIngList() {
       const div = document.createElement('div');
       div.className = 'ing-item';
 
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'ing-item-name';
-      nameSpan.textContent = ing.name;
-      if (!ing.have) { nameSpan.style.cssText = 'color:#b03030;text-decoration:line-through'; }
+      if (_editingIng === ing.name) {
+        // ── Edit mode ──
+        const inp = document.createElement('input');
+        inp.className = 'ing-edit-inp';
+        inp.value = ing.name;
+        inp.onkeydown = e => {
+          if (e.key === 'Enter') { e.preventDefault(); confirmEditIng(ing.name, inp.value); }
+          if (e.key === 'Escape') cancelEditIng();
+        };
 
-      const togBtn = document.createElement('button');
-      togBtn.className = `ing-tog ${ing.have ? 'have' : 'lack'}`;
-      togBtn.textContent = ing.have ? '✓ 有货' : '✗ 缺货';
-      togBtn.onclick = () => toggleIng(ing.name);
+        const okBtn = document.createElement('button');
+        okBtn.className = 'ing-edit-ok';
+        okBtn.textContent = '✓';
+        okBtn.onclick = () => confirmEditIng(ing.name, inp.value);
 
-      const delBtn = document.createElement('button');
-      delBtn.className = 'ing-item-del';
-      delBtn.textContent = '✕';
-      delBtn.onclick = () => deleteIng(ing.name);
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'ing-edit-cancel';
+        cancelBtn.textContent = '✕';
+        cancelBtn.onclick = () => cancelEditIng();
 
-      div.appendChild(nameSpan);
-      div.appendChild(togBtn);
-      div.appendChild(delBtn);
-      c.appendChild(div);
+        div.appendChild(inp);
+        div.appendChild(okBtn);
+        div.appendChild(cancelBtn);
+        c.appendChild(div);
+        setTimeout(() => { inp.focus(); inp.select(); }, 30);
+      } else {
+        // ── Normal mode ──
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'ing-item-name';
+        nameSpan.textContent = ing.name;
+        if (!ing.have) { nameSpan.style.cssText = 'color:#b03030;text-decoration:line-through'; }
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'ing-item-edit';
+        editBtn.textContent = '✏️';
+        editBtn.title = '重命名';
+        editBtn.onclick = () => startEditIng(ing.name);
+
+        const togBtn = document.createElement('button');
+        togBtn.className = `ing-tog ${ing.have ? 'have' : 'lack'}`;
+        togBtn.textContent = ing.have ? '✓ 有货' : '✗ 缺货';
+        togBtn.onclick = () => toggleIng(ing.name);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'ing-item-del';
+        delBtn.textContent = '✕';
+        delBtn.onclick = () => deleteIng(ing.name);
+
+        div.appendChild(nameSpan);
+        div.appendChild(editBtn);
+        div.appendChild(togBtn);
+        div.appendChild(delBtn);
+        c.appendChild(div);
+      }
     });
   }
+}
+
+function startEditIng(name) {
+  _editingIng = name;
+  renderIngList();
+}
+
+function cancelEditIng() {
+  _editingIng = null;
+  renderIngList();
+}
+
+function confirmEditIng(oldName, newName) {
+  newName = (newName || '').trim();
+  if (!newName) { toast('名称不能为空'); return; }
+  if (newName === oldName) { _editingIng = null; renderIngList(); return; }
+  if (S.ingredients.find(i => i.name === newName)) { toast('该名称已存在'); return; }
+  renameIng(oldName, newName);
+}
+
+function renameIng(oldName, newName) {
+  const ing = S.ingredients.find(i => i.name === oldName);
+  if (ing) ing.name = newName;
+  S.recipes.forEach(r => {
+    if (r.ingredients) {
+      r.ingredients = r.ingredients.map(n => n === oldName ? newName : n);
+    }
+  });
+  _editingIng = null;
+  save();
+  renderIngList();
+  renderRecipeList();
+  toast(`✅ 已将「${oldName}」改名为「${newName}」`);
 }
 
 function addIng() {
