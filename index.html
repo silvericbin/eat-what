@@ -88,6 +88,10 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
 .ing-edit-inp{flex:1;background:#fff;border:1.5px solid var(--gd);border-radius:8px;padding:5px 9px;font-size:13px;font-family:'Nunito',sans-serif;color:var(--tx);outline:none;min-width:0}
 .ing-edit-ok{background:var(--gl);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:800;color:#1a6a48;cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0}
 .ing-edit-cancel{background:var(--bg);border:1px solid var(--br);border-radius:8px;padding:5px 9px;font-size:11px;font-weight:800;color:var(--mu);cursor:pointer;font-family:'Nunito',sans-serif;flex-shrink:0}
+.ing-qty{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.ing-qty-btn{background:var(--bg);border:1.5px solid var(--br);border-radius:7px;width:24px;height:24px;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--mu);font-family:'Nunito',sans-serif;line-height:1}
+.ing-qty-btn:active{background:var(--gl);border-color:var(--gd);color:#1a6a48}
+.ing-qty-num{font-size:12px;font-weight:800;min-width:20px;text-align:center;color:var(--tx)}
 /* ── INGREDIENT TAG MODE ── */
 .ing-view-toggle{display:flex;gap:4px}
 .ing-view-btn{background:var(--bg);border:1.5px solid var(--br);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:800;color:var(--mu);transition:all .15s}
@@ -234,6 +238,7 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
         <button class="ing-view-btn" id="ingViewTag" onclick="setIngView('tag')"># 标签</button>
       </div>
     </div>
+    <input class="inp" id="ingSearch" placeholder="🔍 搜索食材..." oninput="renderIngList()" style="margin-bottom:8px">
     <div id="ingList"></div>
     <div class="divl"></div>
     <div class="add-row">
@@ -1005,11 +1010,18 @@ function setIngView(mode) {
 
 function renderIngList() {
   const c = document.getElementById('ingList'); if (!c) return;
+  const q = (document.getElementById('ingSearch')?.value || '').trim().toLowerCase();
   if (!S.ingredients.length) {
     c.innerHTML = '<div style="text-align:center;padding:14px;color:var(--mu);font-size:12px;font-weight:700">还没有食材，添加一些吧！</div>';
     return;
   }
-  const sorted = [...S.ingredients].sort((a,b) => (a.have?1:0)-(b.have?1:0));
+  const sorted = [...S.ingredients]
+    .filter(i => !q || i.name.toLowerCase().includes(q))
+    .sort((a,b) => (a.have?1:0)-(b.have?1:0));
+  if (!sorted.length) {
+    c.innerHTML = '<div style="text-align:center;padding:14px;color:var(--mu);font-size:12px;font-weight:700">没有匹配的食材</div>';
+    return;
+  }
   c.innerHTML = '';
 
   if (_ingView === 'tag') {
@@ -1071,6 +1083,23 @@ function renderIngList() {
         nameSpan.addEventListener('mouseup',   () => clearTimeout(_lpTimer));
         nameSpan.addEventListener('mouseleave', () => clearTimeout(_lpTimer));
 
+        const qtyWrap = document.createElement('div');
+        qtyWrap.className = 'ing-qty';
+        const minusBtn = document.createElement('button');
+        minusBtn.className = 'ing-qty-btn';
+        minusBtn.textContent = '−';
+        minusBtn.onclick = () => adjustIngQty(ing.name, -1);
+        const qtyNum = document.createElement('span');
+        qtyNum.className = 'ing-qty-num';
+        qtyNum.textContent = ing.qty == null ? '—' : ing.qty;
+        const plusBtn = document.createElement('button');
+        plusBtn.className = 'ing-qty-btn';
+        plusBtn.textContent = '+';
+        plusBtn.onclick = () => adjustIngQty(ing.name, 1);
+        qtyWrap.appendChild(minusBtn);
+        qtyWrap.appendChild(qtyNum);
+        qtyWrap.appendChild(plusBtn);
+
         const togBtn = document.createElement('button');
         togBtn.className = `ing-tog ${ing.have ? 'have' : 'lack'}`;
         togBtn.textContent = ing.have ? '✓ 有货' : '✗ 缺货';
@@ -1082,6 +1111,7 @@ function renderIngList() {
         delBtn.onclick = () => deleteIng(ing.name);
 
         div.appendChild(nameSpan);
+        div.appendChild(qtyWrap);
         div.appendChild(togBtn);
         div.appendChild(delBtn);
         c.appendChild(div);
@@ -1130,6 +1160,16 @@ function addIng() {
   if (S.ingredients.find(i => i.name===val)) { toast('食材已存在'); inp.value=''; return; }
   S.ingredients.push({name:val, have:true});
   inp.value = '';
+  save(); renderIngList(); renderRecipeList();
+}
+
+function adjustIngQty(name, delta) {
+  const ing = S.ingredients.find(i => i.name === name); if (!ing) return;
+  if (ing.qty == null && delta < 0) return;
+  const prev = ing.qty ?? 0;
+  ing.qty = Math.max(0, prev + delta);
+  if (ing.qty === 0 && prev > 0) ing.have = false;
+  if (prev === 0 && ing.qty > 0) ing.have = true;
   save(); renderIngList(); renderRecipeList();
 }
 
