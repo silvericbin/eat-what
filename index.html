@@ -212,8 +212,8 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
   </div>
   <div class="tabs">
     <button class="tab" onclick="switchTab('recipes',this)">🍽️ 菜谱</button>
-    <button class="tab" onclick="switchTab('fridge',this)">🥬 食材</button>
-    <button class="tab active" onclick="switchTab('today',this)">📅 今日</button>
+    <button class="tab active" onclick="switchTab('fridge',this)">🥬 食材</button>
+    <button class="tab" onclick="switchTab('today',this)">📅 今日</button>
   </div>
 </div>
 
@@ -225,7 +225,7 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
 </div>
 
 <!-- ══ FRIDGE PAGE ══ -->
-<div id="page-fridge" class="page">
+<div id="page-fridge" class="page active">
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <span class="clbl" style="margin-bottom:0">食材库（与菜谱联动）</span>
@@ -244,7 +244,7 @@ button,input,textarea,select,[onclick]{touch-action:manipulation}
 </div>
 
 <!-- ══ TODAY PAGE ══ -->
-<div id="page-today" class="page active">
+<div id="page-today" class="page">
   <div class="today-summary">
     <div class="today-date-lbl" id="todayDateLbl"></div>
     <div class="today-kcal-big" id="todayKcalBig">0</div>
@@ -1059,12 +1059,17 @@ function renderIngList() {
         nameSpan.className = 'ing-item-name';
         nameSpan.textContent = ing.name;
         if (!ing.have) { nameSpan.style.cssText = 'color:#b03030;text-decoration:line-through'; }
-
-        const editBtn = document.createElement('button');
-        editBtn.className = 'ing-item-edit';
-        editBtn.textContent = '✏️';
-        editBtn.title = '重命名';
-        editBtn.onclick = () => startEditIng(ing.name);
+        let _lpTimer;
+        nameSpan.addEventListener('touchstart', () => {
+          _lpTimer = setTimeout(() => startEditIng(ing.name), 500);
+        }, {passive:true});
+        nameSpan.addEventListener('touchend',    () => clearTimeout(_lpTimer));
+        nameSpan.addEventListener('touchcancel', () => clearTimeout(_lpTimer));
+        nameSpan.addEventListener('mousedown', () => {
+          _lpTimer = setTimeout(() => startEditIng(ing.name), 500);
+        });
+        nameSpan.addEventListener('mouseup',   () => clearTimeout(_lpTimer));
+        nameSpan.addEventListener('mouseleave', () => clearTimeout(_lpTimer));
 
         const togBtn = document.createElement('button');
         togBtn.className = `ing-tog ${ing.have ? 'have' : 'lack'}`;
@@ -1077,7 +1082,6 @@ function renderIngList() {
         delBtn.onclick = () => deleteIng(ing.name);
 
         div.appendChild(nameSpan);
-        div.appendChild(editBtn);
         div.appendChild(togBtn);
         div.appendChild(delBtn);
         c.appendChild(div);
