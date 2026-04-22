@@ -1166,10 +1166,8 @@ function addIng() {
 function adjustIngQty(name, delta) {
   const ing = S.ingredients.find(i => i.name === name); if (!ing) return;
   if (ing.qty == null && delta < 0) return;
-  const prev = ing.qty ?? 0;
-  ing.qty = Math.max(0, prev + delta);
-  if (ing.qty === 0 && prev > 0) ing.have = false;
-  if (prev === 0 && ing.qty > 0) ing.have = true;
+  const next = (ing.qty ?? 0) + delta;
+  ing.qty = next <= 0 ? null : next;
   save(); renderIngList(); renderRecipeList();
 }
 
